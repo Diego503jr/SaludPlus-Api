@@ -5,18 +5,13 @@ exports.register = async (req, res) => {
     const data = await authService.register(req.body);
     res.json({
       succes: true,
-      data: {
-        id: data.id,
-        nombre: data.nombre,
-        apellido: data.apellido,
-        email: data.email,
-        rol_id: data.rol_id,
-      },
+      data: data,
       message: "Registro correctamente",
     });
   } catch (err) {
     res.status(500).json({
       succes: false,
+      data: {},
       error: err.message,
     });
   }
@@ -25,20 +20,16 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const data = await authService.login(req.body);
+
     res.json({
       succes: true,
-      data: {
-        id: data.id,
-        nombre: data.nombre,
-        apellido: data.apellido,
-        email: data.email,
-        rol_id: data.rol_id,
-      },
-      message: "Login correctamente",
+      data: data,
+      message: "Login Corretamente",
     });
   } catch (err) {
     res.status(401).json({
       succes: false,
+      data: {},
       error: err.message,
     });
   }

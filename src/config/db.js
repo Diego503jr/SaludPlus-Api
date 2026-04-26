@@ -1,6 +1,7 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
+//Conexion directa a la base de datos por medio de variables de entorno
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
