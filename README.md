@@ -110,8 +110,8 @@ Responsable de:
 - Acceder a la base de datos
 
 ```js
-const result = await pool.query("SELECT * FROM usuarios WHERE email = $1", [
-  email,
+const result = await pool.query("...", [
+  ...,
 ]);
 ```
 
@@ -131,7 +131,8 @@ El controller responde:
 {
   "success": true,
   "data": {
-    "user": { "id": 1, "nombre": "Diego" },
+    "id": 1,
+    "nombre": "Diego",
     "token": "JWT..."
   }
 }
