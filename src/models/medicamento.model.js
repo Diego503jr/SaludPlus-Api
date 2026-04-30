@@ -6,7 +6,11 @@ exports.getMedicine = async (id = null) => {
 
   try {
     const query = `
-      SELECT * FROM medicamentos 
+      SELECT id, nombre_generico AS "nombreGenerico",
+      nombre_comercial AS "nombreComercial",
+      forma_farmaceutica AS "formaFarmaceutica",
+      concentracion, activo
+      FROM medicamentos 
       WHERE activo = True 
         AND ($1::INT IS NULL OR id = $1::INT)
       ORDER BY id ASC`;
