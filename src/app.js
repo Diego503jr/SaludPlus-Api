@@ -8,6 +8,7 @@ const pacienteMedicoRoutes = require("./routes/pacienteMedico.route");
 const medicamentoRoutes = require("./routes/medicamento.route");
 const asistenciaRoutes = require("./routes/asistenciaCita.route");
 const historialPaciente = require("./routes/historialPaciente.route");
+const recetaRoutes = require("./routes/receta.route");
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.use("/paciente", pacienteMedicoRoutes);
 app.use("/medicina", medicamentoRoutes);
 app.use("/asistencia", asistenciaRoutes);
 app.use("/paciente", historialPaciente);
+app.use("/receta", recetaRoutes);
 
 module.exports = app;

@@ -1,0 +1,31 @@
+const recetaService = require("../services/receta.service");
+
+exports.createReceta = async (req, res) => {
+    try {
+        // ID del paciente viene de la URL (:id)
+        const { id: pacienteId } = req.params; 
+        
+        // ID del médico viene de la sesión/token (autenticación)
+        const medicoId = req.user.id; 
+
+        // Otros datos (como observaciones) vienen del body
+        const { observaciones } = req.body; 
+
+        const result = await recetaService.createReceta(pacienteId, medicoId, observaciones);
+
+        return res.status(201).json({
+            data: result,
+            success: true,
+            message: "Receta creada correctamente."
+        });
+
+    } catch (error) {
+        console.error("Error al crear receta:", error.message);
+        const statusCode = error.message.includes("No se encontró") ? 404 : 400;
+        
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || "Error al procesar la receta."
+        });
+    }
+};
