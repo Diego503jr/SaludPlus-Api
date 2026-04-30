@@ -1,0 +1,27 @@
+const pool = require("../config/db");
+
+//GET TODOS LOS MEDICAMENTOS ACTIVOS
+exports.getMedicine = async (id = null) => {
+  const client = await pool.connect();
+
+  try {
+    const query = `
+      SELECT * FROM medicamentos 
+      WHERE activo = True 
+        AND ($1::INT IS NULL OR id = $1::INT)
+      ORDER BY id ASC`;
+    const response = await client.query(query, [id]);
+
+    // Si no hay filas
+    if (response.rows.length === 0) {
+        throw new Error(`No hay medicamentos disponibles`);
+    }
+
+    return response.rows;
+
+  } catch (err) {
+    throw err;
+  } finally {
+    client.release();
+  }
+};
