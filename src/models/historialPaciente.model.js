@@ -15,7 +15,16 @@ exports.updateHistorialPaciente = async (id, historial) => {
         nota_clinica = $4,
         medicamentos_recurrente = $5
         WHERE id = $6
-      RETURNING *;`;
+      RETURNING 
+      id AS pacienteId,
+      usuario_id AS "usuarioId",
+      estado_familiar AS "estadoFamiliar",
+      num_afiliado AS "numAfiliado",
+      tipo_sangre AS "tipoSangre",
+      alergias,
+      condiciones_cronicas AS "condicionesCronicas",
+      nota_clinica AS "notaClinica",
+      medicamentos_recurrente AS "medicamentosRecurrente";`;
 
     const values = [tipoSangre, alergias, condicionesCronicas, notaClinica, medicamentosRecurrentes, id];
 

@@ -13,7 +13,7 @@ exports.updateAsistido = async (id, asistidoCita) => {
       FROM citas AS C
       WHERE AC.cita_id = C.id
         AND AC.cita_id = $2::UUID
-      RETURNING AC.*;`;
+      RETURNING AC.id AS asistenciaCitaId, AC.cita_id AS citaId, AC.medico_id AS medicoId, AC.marcado_at AS marcadoAt, AC.asistio;`;
 
     const values = [asistio, id];
 
