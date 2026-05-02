@@ -1,15 +1,24 @@
-const jwt = require("jsonwebtoken");
+// const jwt = require("jsonwebtoken");
+const securityLib = require("../utils/security.lib");
 
 module.exports = (req, res, next) => {
   const token = req.headers["authorization"];
 
-  if (!token) return res.status(401).json({ error: "No token" });
+  if (!token)
+    return res
+      .status(401)
+      .json({ success: false, data: {}, message: "No hay token" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch {
-    res.status(401).json({ error: "Token inválido" });
+    const decoded = securityLib.validateToken(token);
+
+    if (!decoded) {
+      throw new Error("Token inválido");
+    } else {
+      req.user = decoded;
+      next();
+    }
+  } catch (err) {
+    res.status(401).json({ success: false, data: {}, message: err.message });
   }
 };

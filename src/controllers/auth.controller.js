@@ -15,7 +15,7 @@ exports.registerPaciente = async (req, res) => {
     res.status(500).json({
       succes: false,
       data: {},
-      error: err.message,
+      message: err.message,
     });
   }
 };
@@ -36,7 +36,7 @@ exports.registerMedico = async (req, res) => {
     res.status(500).json({
       succes: false,
       data: {},
-      error: err.message,
+      message: err.message,
     });
   }
 };
@@ -57,7 +57,7 @@ exports.login = async (req, res) => {
     res.status(401).json({
       succes: false,
       data: {},
-      error: err.message,
+      message: err.message,
     });
   }
 };

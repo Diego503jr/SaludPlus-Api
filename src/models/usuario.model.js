@@ -1,63 +1,72 @@
 const pool = require("../config/db");
 
-// Funcion para obtener el usuario por medio del email (SELECTWHERE)
-exports.findByEmail = async (data) => {
+// Funcion by paciente (LOGIN)
+exports.findByPacient = async (user) => {
   // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
   const client = await pool.connect();
 
   try {
-    // Variables para retornar las columnas necesarias
-    let result = {};
-
     // Iniciamos la transaccion
     await client.query("BEGIN");
 
-    // Realizamos las consultas requeridas
-    let response = await client.query(
-      `SELECT U.id, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono,
-           U.fecha_nacimiento AS fechaNacimiento, U.genero, U.rol_id AS rolId, U.activo 
-       FROM usuarios U WHERE U.email = $1 AND U.activo = True`,
-      [data.email],
+    let result = await client.query(
+      `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono, U.fecha_nacimiento AS fechaNacimiento
+          , U.genero, U.rol_id AS rolId, P.estado_familiar AS estadoFamiliar, P.num_afiliado AS numAfiliado, P.tipo_sangre AS tipoSangre
+          , P.alergias, P.condiciones_cronicas AS condicionesCronicas, P.nota_clinica AS notaClinica, P.medicamentos_recurrente AS medicamentosRecurrente
+         FROM pacientes P 
+          INNER JOIN usuarios U ON U.id = P.usuario_id
+         WHERE P.num_afiliado = $1`,
+      [user.numAfiliado],
     );
 
-    // Verificamos si existe el usuario
-    if (!response.rows[0]) {
-      throw new Error(`No existe el usuario con ese correo electronico.`);
-    }
-
-    // Seteamos los valores del usuario
-    result = response.rows[0];
-
-    // Verificamos si es Paciente o Medico para hacer el select a la tabla correspondiente
-    if (data.rol == 1) {
-      response = await client.query(
-        `SELECT P.estado_familiar AS estadoFamiliar, P.num_afiliado AS numAfiliado, P.tipo_sangre AS tipoSangre, 
-            P.alergias, P.condiciones_cronicas AS condicionesCronicas, P.nota_clinica AS notaClinica, P.medicamentos_recurrente AS medicamentosRecurrente 
-         FROM pacientes P WHERE P.usuario_id = $1`,
-        [result.id],
-      );
-    } else {
-      response = await client.query(
-        `SELECT M.num_jvpm AS numJvpm, M.especialidad_id AS especialidadId, M.unidad_medica_id AS unidadMedicaId 
-         FROM medicos M WHERE M.usuario_id = $1`,
-        [result.id],
-      );
-    }
-
     // Verificamos si el usuario tiene asignado un (Paciente/Medico)
-    if (!response.rows[0]) {
-      throw new Error(
-        `El usuario no tiene ${data.rol == 1 ? "paciente" : "medico"} asociado.`,
-      );
+    if (!result.rows[0]) {
+      throw new Error(`No se encontro el paciente.`);
     }
-
-    result = { ...result, ...response.rows[0] };
 
     // Aceptamos cambios
     await client.query("COMMIT");
 
     // Retornamos el result por default de la db
-    return result;
+    return result.rows[0];
+  } catch (err) {
+    // Salio algo mal hacemos un rollback
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    // Liberamos la conexion
+    client.release();
+  }
+};
+
+// Funcion by medico (LOGIN)
+exports.findByMedic = async (user) => {
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+
+  try {
+    // Iniciamos la transaccion
+    await client.query("BEGIN");
+
+    let result = await client.query(
+      `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono, U.fecha_nacimiento AS fechaNacimiento
+          , U.genero, U.rol_id AS rolId, M.num_jvpm AS numJvpm, M.especialidad_id AS especialidadId, M.unidad_medica_id AS unidadMedicaId
+         FROM medicos M 
+          INNER JOIN usuarios U ON U.id = M.usuario_id
+         WHERE M.num_jvpm = $1`,
+      [user.numJvpm],
+    );
+
+    // Verificamos si el usuario tiene asignado un (Paciente/Medico)
+    if (!result.rows[0]) {
+      throw new Error(`No se encontro el medico.`);
+    }
+
+    // Aceptamos cambios
+    await client.query("COMMIT");
+
+    // Retornamos el result por default de la db
+    return result.rows[0];
   } catch (err) {
     // Salio algo mal hacemos un rollback
     await client.query("ROLLBACK");
@@ -99,7 +108,7 @@ exports.createPaciente = async (user) => {
     let response = await client.query(
       `INSERT INTO usuarios (nombre, apellido, dui, email, password_hash, telefono, fecha_nacimiento, genero, rol_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) 
-       RETURNING id, nombre, apellido, dui, email, telefono, fecha_nacimiento AS fechaNacimiento, genero, rol_id AS rolId`,
+       RETURNING id AS usuariosId, nombre, apellido, dui, email, telefono, fecha_nacimiento AS fechaNacimiento, genero, rol_id AS rolId`,
       [
         nombre,
         apellido,
@@ -125,9 +134,9 @@ exports.createPaciente = async (user) => {
     response = await client.query(
       `INSERT INTO pacientes (usuario_id, estado_familiar, num_afiliado)
        VALUES ($1,$2,$3)
-       RETURNING estado_familiar AS  estadoFamiliar, num_afiliado AS numAfiliado, tipo_sangre AS tipoSangre, alergias,
+       RETURNING id AS pacienteId, estado_familiar AS  estadoFamiliar, num_afiliado AS numAfiliado, tipo_sangre AS tipoSangre, alergias,
           condiciones_cronicas AS condicionesCronicas, nota_clinica AS notaClinica, medicamentos_recurrente AS medicamentosRecurrente`,
-      [result.id, estadoFamiliar, numAfiliado],
+      [result.usuariosid, estadoFamiliar, numAfiliado],
     );
 
     // Verificamos si el usuario tiene asignado un (Paciente/Medico)
@@ -152,7 +161,7 @@ exports.createPaciente = async (user) => {
   }
 };
 
-//Funcion para crear un Medico
+// Funcion para crear un Medico
 exports.createMedico = async (data) => {
   // Hacemos un destructuring del objeto que traemos de user
   const {
@@ -184,7 +193,7 @@ exports.createMedico = async (data) => {
     let response = await client.query(
       `INSERT INTO usuarios (nombre, apellido, dui, email, password_hash, telefono, fecha_nacimiento, genero, rol_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) 
-       RETURNING id, nombre, apellido, dui, email, telefono, fecha_nacimiento AS fechaNacimiento, genero, rol_id AS rolId`,
+       RETURNING id AS usuariosId, nombre, apellido, dui, email, telefono, fecha_nacimiento AS fechaNacimiento, genero, rol_id AS rolId`,
       [
         nombre,
         apellido,
@@ -209,8 +218,8 @@ exports.createMedico = async (data) => {
     response = await client.query(
       `INSERT INTO medicos (usuario_id, num_jvpm, especialidad_id, unidad_medica_id) 
        VALUES ($1,$2,$3,$4)
-       RETURNING num_jvpm AS numJvpm, especialidad_id AS especialidadId, unidad_medica_id AS unidadMedicaId`,
-      [result.id, numJvpm, especialidad, unidadMedica],
+       RETURNING id AS medicoId, num_jvpm AS numJvpm, especialidad_id AS especialidadId, unidad_medica_id AS unidadMedicaId`,
+      [result.usuariosid, numJvpm, especialidad, unidadMedica],
     );
 
     // Verificamos si el usuario tiene asignado un (Paciente/Medico)
@@ -233,4 +242,46 @@ exports.createMedico = async (data) => {
     //Liberamos la conexion
     client.release();
   }
+};
+
+// Funcion para registrar el login
+exports.registerLogIn = async (data) => {
+  console.log(data);
+
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+  let logIn = false;
+
+  try {
+    // Iniciamos la transaccion
+    await client.query("BEGIN");
+
+    // Realizamos las inserciones en las tablas
+    let result = await client.query(
+      `INSERT INTO refresh_tokens (usuario_id, expires_at, token_hash)
+       VALUES ($1,NOW() + INTERVAL '1 hour',$2)
+      `,
+      [data.usuarioId, data.token_jwt],
+    );
+
+    // Verificamos si se registro el login
+    if (!result.rows[0]) {
+      throw new Error(`No se logro registrar el inicio de sesion.`);
+    }
+
+    // Aceptamos cambios
+    await client.query("COMMIT");
+
+    logIn = true;
+  } catch (err) {
+    //Salio algo mal hacemos un rollback
+    await client.query("ROLLBACK");
+    logIn = false;
+    throw err;
+  } finally {
+    //Liberamos la conexion
+    client.release();
+  }
+
+  return logIn;
 };
