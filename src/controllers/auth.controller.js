@@ -12,6 +12,7 @@ exports.registerPaciente = async (req, res) => {
       message: "Paciente registrado correctamente.",
     });
   } catch (err) {
+    console.error("🚨 ERROR AL REGISTRAR:", err);
     res.status(500).json({
       succes: false,
       data: {},
@@ -54,6 +55,8 @@ exports.login = async (req, res) => {
     });
   } catch (err) {
     // Enviamos la data de error al front-end
+    console.error("🚨 ERROR AL iniciar:", err);
+
     res.status(401).json({
       succes: false,
       data: {},

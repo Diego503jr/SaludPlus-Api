@@ -265,7 +265,12 @@ exports.registerLogIn = async (data) => {
     );
 
     // Verificamos si se registro el login
-    if (!result.rows[0]) {
+    // if (!result.rows[0]) {
+    //   throw new Error(`No se logro registrar el inicio de sesion.`);
+    // }
+
+    // Verificamos si se registro el login verificando las filas afectadas
+    if (result.rowCount === 0) {
       throw new Error(`No se logro registrar el inicio de sesion.`);
     }
 
