@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
     const decoded = securityLib.validateToken(token);
 
     if (!decoded) {
-      throw new Error("Token inválido");
+      throw new Error("Token inválido o no existe.");
     } else {
       req.user = decoded;
       next();

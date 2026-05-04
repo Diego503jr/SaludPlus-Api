@@ -18,23 +18,6 @@ exports.registerPaciente = async (data) => {
   return result;
 };
 
-// Funcion de service para registrar de medico
-exports.registerMedico = async (data) => {
-  // Hasheamos la pwd con la lib bcrypt
-  const hashedPassword = await securityLib.hash(data.password);
-
-  // Hacemos una copia de las propiedades del obj "data" y sobreescribimos la key pwd (Spread Operator)
-  const finData = {
-    ...data,
-    password: hashedPassword,
-  };
-
-  // Hacemos una llamada al model
-  const result = await usuarioModel.createMedico(finData);
-
-  return result;
-};
-
 // Funcion de service para realizar el login
 exports.login = async (data) => {
   let result = null;
@@ -47,18 +30,24 @@ exports.login = async (data) => {
   }
 
   // Verificamos si no hay usuario
-  if (!result) throw new Error("Usuario no encontrado");
+  if (!result) {
+    const error = Error("Usuario no encontrado");
+    error.status = 400;
+    throw error;
+  }
 
   // Comparamos las pwd de la db y con la que le pasamos en data
   const valid = await securityLib.compare(data.password, result.password);
-  if (!valid) throw new Error("Contraseña incorrecta");
+  if (!valid) {
+    const error = Error("Contraseña incorrecta");
+    error.status = 400;
+    throw error;
+  }
 
   // Creamos el token de autenticacion
   const token_jwt = securityLib.createToken(result);
 
   if (!token_jwt) throw new Error("No se logro generar el token de inicio.");
-
-  //Hasheamos el token
 
   // Hacemos un destructuring para quitar el id y la pwd
   const { password, ...cleanUser } = result;

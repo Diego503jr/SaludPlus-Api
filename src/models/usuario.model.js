@@ -154,6 +154,8 @@ exports.createPaciente = async (user) => {
   } catch (err) {
     // Salio algo mal hacemos un rollback
     await client.query("ROLLBACK");
+
+    if (err?.message?.includes("llave duplicada")) err.status = 409;
     throw err;
   } finally {
     // Liberamos la conexion
@@ -161,93 +163,8 @@ exports.createPaciente = async (user) => {
   }
 };
 
-// Funcion para crear un Medico
-exports.createMedico = async (data) => {
-  // Hacemos un destructuring del objeto que traemos de user
-  const {
-    nombre,
-    apellido,
-    dui,
-    email,
-    password,
-    telefono,
-    fechaNacimiento,
-    genero,
-    rol,
-    numJvpm,
-    especialidad,
-    unidadMedica,
-  } = data;
-
-  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
-  const client = await pool.connect();
-
-  try {
-    // Variables para retornar las columnas necesarias
-    let result = {};
-
-    // Iniciamos la transaccion
-    await client.query("BEGIN");
-
-    // Realizamos las inserciones en las tablas
-    let response = await client.query(
-      `INSERT INTO usuarios (nombre, apellido, dui, email, password_hash, telefono, fecha_nacimiento, genero, rol_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) 
-       RETURNING id AS usuariosId, nombre, apellido, dui, email, telefono, fecha_nacimiento AS fechaNacimiento, genero, rol_id AS rolId`,
-      [
-        nombre,
-        apellido,
-        dui,
-        email,
-        password,
-        telefono,
-        fechaNacimiento,
-        genero,
-        rol,
-      ],
-    );
-
-    // Verificamos si se registro el usuario
-    if (!response.rows[0]) {
-      throw new Error(`No se registro el paciente exitosamente.`);
-    }
-
-    // Seteamos los valores del usuario
-    result = response.rows[0];
-
-    response = await client.query(
-      `INSERT INTO medicos (usuario_id, num_jvpm, especialidad_id, unidad_medica_id) 
-       VALUES ($1,$2,$3,$4)
-       RETURNING id AS medicoId, num_jvpm AS numJvpm, especialidad_id AS especialidadId, unidad_medica_id AS unidadMedicaId`,
-      [result.usuariosid, numJvpm, especialidad, unidadMedica],
-    );
-
-    // Verificamos si el usuario tiene asignado un (Paciente/Medico)
-    if (!response.rows[0]) {
-      throw new Error(`No se logro registrar al medico correctamente.`);
-    }
-
-    result = { ...result, ...response.rows[0] };
-
-    // Aceptamos cambios
-    await client.query("COMMIT");
-
-    // Retornamos el result por default de la db
-    return result;
-  } catch (err) {
-    //Salio algo mal hacemos un rollback
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    //Liberamos la conexion
-    client.release();
-  }
-};
-
 // Funcion para registrar el login
 exports.registerLogIn = async (data) => {
-  console.log(data);
-
   // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
   const client = await pool.connect();
   let logIn = false;
@@ -260,8 +177,9 @@ exports.registerLogIn = async (data) => {
     let result = await client.query(
       `INSERT INTO refresh_tokens (usuario_id, expires_at, token_hash)
        VALUES ($1,NOW() + INTERVAL '1 hour',$2)
+       RETURNING usuario_id AS usuarioId
       `,
-      [data.usuarioId, data.token_jwt],
+      [data.usuarioid, data.token],
     );
 
     // Verificamos si se registro el login
