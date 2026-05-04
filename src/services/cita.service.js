@@ -217,3 +217,36 @@ exports.obtenerPerfil = async (idPaciente) => {
         throw error;
     }
 };
+
+// ==========================================
+// GUARDAR CITA (POST): SERVICIO
+// ==========================================
+exports.agendarCita = async (citaData) => {
+    try {
+        const nuevaCita = await citaModel.crearCita(citaData);
+        return nuevaCita;
+    } catch (error) {
+        // Si hay un error de unicidad (el paciente intenta agendar dos veces a la misma hora)
+        if (error.code === '23505') { 
+            throw new Error('Ya tienes una cita agendada en esa unidad, especialidad, fecha y hora.');
+        }
+        throw error;
+    }
+};
+
+// ==========================================
+// EDITAR PERFIL (PUT): SERVICIO
+// ==========================================
+exports.editarPerfil = async (idPaciente, datos) => {
+    try {
+        await citaModel.actualizarPerfil(idPaciente, datos);
+        
+        // Opcional: Podrías retornar el perfil actualizado completo llamando a la función que hicimos antes
+        return { mensaje: "Perfil actualizado correctamente" };
+    } catch (error) {
+        if (error.message === 'Paciente no encontrado') {
+            throw error;
+        }
+        throw new Error('Error al actualizar en la base de datos');
+    }
+};

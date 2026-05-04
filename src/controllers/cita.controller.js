@@ -216,3 +216,90 @@ exports.getPerfilPaciente = async (req, res) => {
         });
     }
 };
+
+// ==========================================
+// GUARDAR CITA (POST): CONTROLADOR
+// ==========================================
+exports.crearCita = async (req, res) => {
+    try {
+        const { 
+            paciente_id, 
+            especialidad_id, 
+            unidad_medica_id, 
+            fecha_solicitada, 
+            hora_asignada, 
+            motivo_consulta 
+        } = req.body;
+
+        // Validar que el frontend nos mande todos los campos requeridos
+        if (!paciente_id || !especialidad_id || !unidad_medica_id || !fecha_solicitada || !hora_asignada || !motivo_consulta) {
+            return res.status(400).json({
+                exito: false,
+                mensaje: "Faltan datos obligatorios para agendar la cita"
+            });
+        }
+
+        const nuevaCita = await citaService.agendarCita(req.body);
+
+        res.status(201).json({
+            exito: true,
+            mensaje: "¡Cita agendada correctamente!",
+            datos: nuevaCita
+        });
+
+    } catch (error) {
+        console.error("Error en crearCita:", error);
+        
+        // Manejo del error de cita duplicada que mandamos desde el servicio
+        if (error.message.includes('Ya tienes una cita')) {
+            return res.status(409).json({
+                exito: false,
+                mensaje: error.message
+            });
+        }
+
+        res.status(500).json({
+            exito: false,
+            mensaje: "Error interno del servidor al crear la cita"
+        });
+    }
+};
+
+// ==========================================
+// EDITAR PERFIL (PUT): CONTROLADOR
+// ==========================================
+exports.actualizarPerfilPaciente = async (req, res) => {
+    try {
+        const idPaciente = req.params.pacienteId;
+        const datosBody = req.body;
+
+        if (!idPaciente) {
+            return res.status(400).json({
+                exito: false,
+                mensaje: "El ID del paciente es requerido en la URL"
+            });
+        }
+
+        await citaService.editarPerfil(idPaciente, datosBody);
+
+        res.status(200).json({
+            exito: true,
+            mensaje: "¡Datos del perfil actualizados con éxito!"
+        });
+
+    } catch (error) {
+        console.error("Error en actualizarPerfilPaciente:", error);
+        
+        if (error.message === 'Paciente no encontrado') {
+            return res.status(404).json({
+                exito: false,
+                mensaje: error.message
+            });
+        }
+
+        res.status(500).json({
+            exito: false,
+            mensaje: "Error interno del servidor al actualizar el perfil"
+        });
+    }
+};
