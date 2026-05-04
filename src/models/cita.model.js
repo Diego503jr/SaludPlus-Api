@@ -279,3 +279,94 @@ exports.GetAppointments = async (id) => {
     client.release();
   }
 };
+
+// ==========================================
+// GUARDAR CITA (POST)
+// ==========================================
+exports.crearCita = async (citaData) => {
+  const client = await pool.connect();
+
+  try {
+    const query = `
+      INSERT INTO citas (
+        paciente_id, 
+        especialidad_id, 
+        unidad_medica_id, 
+        fecha_solicitada, 
+        hora_asignada, 
+        motivo_consulta, 
+        estado_id
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, 
+        (SELECT id FROM estados_cita WHERE nombre = 'pendiente')
+      ) RETURNING *;
+    `;
+    
+    const values = [
+      citaData.paciente_id,
+      citaData.especialidad_id,
+      citaData.unidad_medica_id,
+      citaData.fecha_solicitada,
+      citaData.hora_asignada,
+      citaData.motivo_consulta
+    ];
+
+    const response = await client.query(query, values);
+    return response.rows[0];
+
+  } catch (err) {
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+// ==========================================
+// EDITAR PERFIL (PUT): ACTUALIZAR USUARIO Y PACIENTE
+// ==========================================
+exports.actualizarPerfil = async (idPaciente, datos) => {
+  const client = await pool.connect();
+
+  try {
+    // Iniciamos la transacción: Si una tabla falla, la otra no se actualiza
+    await client.query('BEGIN');
+
+    // 1. Primero averiguamos cuál es el ID del usuario ligado a este paciente
+    const userQuery = 'SELECT usuario_id FROM pacientes WHERE id = $1';
+    const userRes = await client.query(userQuery, [idPaciente]);
+
+    if (userRes.rows.length === 0) {
+        throw new Error('Paciente no encontrado');
+    }
+    const idUsuario = userRes.rows[0].usuario_id;
+
+    // 2. Actualizamos la tabla 'usuarios' (solo telefono)
+    const updateUsuario = `
+      UPDATE usuarios 
+      SET telefono = COALESCE($1, telefono)
+      WHERE id = $2;
+    `;
+    await client.query(updateUsuario, [datos.telefono, idUsuario]);
+
+   // 3. Actualizamos la tabla 'pacientes' (alergias y condiciones)
+    const updatePaciente = `
+      UPDATE pacientes 
+      SET alergias = COALESCE($1, alergias),
+          condiciones_cronicas = COALESCE($2, condiciones_cronicas)
+      WHERE id = $3;
+    `;
+    // Pasamos solo 3 parámetros ahora
+    await client.query(updatePaciente, [datos.alergias, datos.condiciones_cronicas, idPaciente]);
+
+    // Si todo salió bien, guardamos los cambios definitivamente
+    await client.query('COMMIT');
+    return true;
+
+  } catch (err) {
+    // Si algo falló, deshacemos cualquier cambio a la mitad para evitar datos corruptos
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};

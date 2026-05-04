@@ -21,4 +21,10 @@ router.get('/unidades-mapa', citaController.getUnidadesMapa);
 // RUTA: Obtener el perfil completo del paciente (Datos generales + ISSS)
 router.get('/perfil/:pacienteId', citaController.getPerfilPaciente);
 
+// RUTA: Guardar una cita nueva en la base de datos
+router.post('/agendar', citaController.crearCita);
+
+// RUTA: Actualizar datos de contacto y médicos del paciente
+router.put('/perfil/:pacienteId', citaController.actualizarPerfilPaciente);
+
 module.exports = router;
