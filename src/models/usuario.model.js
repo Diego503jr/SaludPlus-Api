@@ -182,13 +182,8 @@ exports.registerLogIn = async (data) => {
       [data.usuarioid, data.token],
     );
 
-    // Verificamos si se registro el login
-    // if (!result.rows[0]) {
-    //   throw new Error(`No se logro registrar el inicio de sesion.`);
-    // }
-
-    // Verificamos si se registro el login verificando las filas afectadas
-    if (result.rowCount === 0) {
+    //Verificamos si se registro el login
+    if (!result.rows[0]) {
       throw new Error(`No se logro registrar el inicio de sesion.`);
     }
 
