@@ -1,12 +1,16 @@
 const pool = require("../config/db");
 
+//FUNCIÓN PARA ACTUALIZAR HISTORIAL CLINICO DE PACIENTE
 exports.updateHistorialPaciente = async (id, historial) => {
+  //Desestructuramos los datos recibidos desde la petición
   const { tipoSangre, alergias, condicionesCronicas, notaClinica, medicamentosRecurrentes } = historial;
   const client = await pool.connect();
 
   try {
+    //Inicio de transacción
     await client.query("BEGIN");
     
+    //Consulta update para campos de historial
     const query = `
       UPDATE Pacientes
         SET tipo_sangre = $1,
@@ -28,16 +32,22 @@ exports.updateHistorialPaciente = async (id, historial) => {
 
     const values = [tipoSangre, alergias, condicionesCronicas, notaClinica, medicamentosRecurrentes, id];
 
+    //Ejecutamos consulta pasando información médica e id
     const response = await client.query(query, values);
 
+    //Validamos si el registro de paciente existe
     if (response.rowCount === 0) {
       throw new Error(`No se pudo actualizar el paciente con id ${id}.`);
     }
 
+    //Aplicamos cambios
     await client.query("COMMIT");
+    
+    //Retornamos objeto actualizado
     return response.rows[0];
 
   } catch (err) {
+    //Rollback si falla
     await client.query("ROLLBACK");
     throw err;
   } finally {

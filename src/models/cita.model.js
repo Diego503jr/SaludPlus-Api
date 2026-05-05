@@ -243,6 +243,7 @@ exports.GetAppointments = async (id) => {
   const client = await pool.connect();
 
   try {
+    //Consulta para obtener información de paciente, usuario, especialidad y estados
     const query = `
       SELECT 
           P.id AS pacienteId,
@@ -264,13 +265,15 @@ exports.GetAppointments = async (id) => {
         AND EC.nombre NOT IN ('cancelada_sistema', 'atendida'); 
 `;
 
+  //Ejecutamos con id de médico autenticado
     const response = await client.query(query, [id]);
 
-    // Si no hay filas
+    // Validamos si tiene citas pendientes o activas
     if (response.rows.length === 0) {
         throw new Error(`No hay citas disponibles: ${id}`);
     }
 
+    //Retornamos el listado completo de citas 
     return response.rows;
 
   } catch (err) {

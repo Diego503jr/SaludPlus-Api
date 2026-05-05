@@ -1,11 +1,14 @@
 const pool = require("../config/db");
 
+//FUNCIÓN PARA CREAR RECETA
 exports.createReceta = async (pacienteId, medicoId, observaciones) => {
   const client = await pool.connect();
 
   try {
+    //Inicio de transacción
     await client.query("BEGIN");
     
+    //Consulta para la creación de receta
     const query = `
     INSERT INTO recetas (cita_id, medico_id, paciente_id, fecha, observaciones)
     VALUES (
@@ -28,16 +31,22 @@ exports.createReceta = async (pacienteId, medicoId, observaciones) => {
 
     const values = [pacienteId, medicoId, observaciones];
 
+    //Ejecutamos consulta enviando información
     const response = await client.query(query, values);
 
+    //Si no se encuentra cita por paciente
     if (response.rowCount === 0) {
       throw new Error(`No se encontró una cita asociada al paciente con id ${pacienteId}.`);
     }
 
+    //Confirmación de cambios
     await client.query("COMMIT");
+
+    //Retornamos objeto creado
     return response.rows[0];
 
   } catch (err) {
+    //Rollback si falla la creación
     await client.query("ROLLBACK");
     throw err;
   } finally {

@@ -1,10 +1,11 @@
 const pool = require("../config/db");
 
-//GET TODOS LOS MEDICAMENTOS ACTIVOS
+//GET TODOS LOS MEDICAMENTOS ACTIVOS O UN MEDICAMENTO POR ID
 exports.getMedicine = async (id = null) => {
   const client = await pool.connect();
 
   try {
+    //Consulta para obtener todos los medicamentos disponibles o un medicamento por id
     const query = `
       SELECT id, nombre_generico AS "nombreGenerico",
       nombre_comercial AS "nombreComercial",

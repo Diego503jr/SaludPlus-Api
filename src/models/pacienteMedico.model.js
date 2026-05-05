@@ -5,6 +5,7 @@ exports.GetPatientInfo = async (id) => {
   const client = await pool.connect();
 
   try {
+    //Consulta para obtener información personal e historia clinica
     const query = `
         SELECT 
           U.nombre,
@@ -28,6 +29,7 @@ exports.GetPatientInfo = async (id) => {
         INNER JOIN usuarios U ON P.usuario_id = U.id
         WHERE P.id = $1`;
 
+    //Ejecutamos consulta con id de paciente
     const response = await client.query(query, [id]);
 
     // Si no hay filas, el paciente no existe

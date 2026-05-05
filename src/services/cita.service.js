@@ -3,12 +3,15 @@ const citaModel = require("../models/cita.model");
 //TODAS LAS CITAS DE MÉDICO
 exports.GetAppointments = async (userId) => {
    
+    //Obtenemos toda la información
     const agenda = await citaModel.GetAppointments(userId);
 
+    //Si no hay información (no existen citas)
     if (!agenda || agenda.length === 0) {
         throw new Error("No se encontraron citas para este médico.");
     }
 
+    //Devolvemos información
     return {
         citas: agenda
     };

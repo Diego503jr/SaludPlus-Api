@@ -3,10 +3,13 @@ const medicoService = require("../services/medico.service");
 // INFORMACIÓN DE PERFIL DE MÉDICO LOGEADO
 exports.findMedicoLogged = async (req, res) => {
   try {
+    //Extraemos id  desde token
     const userId = req.user.id;
 
+    //Consulta al servicio para obtener datos de perfil
     const perfilMedico = await medicoService.findMedicoLogged(userId);
 
+    //Si todo sale bien, respondemos con información solicitada
     return res.status(200).json({
       data: perfilMedico,
       message: "Información de médico.",
@@ -15,6 +18,7 @@ exports.findMedicoLogged = async (req, res) => {
   } catch (error) {
     console.error("Error en al obtener información de médico:", error.message);
 
+    //Gestión dinámica del error
     const statusCode = error.message.includes("No se encontró") ? 404 : 500;
 
     return res.status(statusCode).json({
