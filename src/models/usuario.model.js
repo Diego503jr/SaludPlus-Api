@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { logout } = require("../controllers/auth.controller");
 
 // Funcion by paciente (LOGIN)
 exports.findByPacient = async (user) => {
@@ -168,13 +169,29 @@ exports.registerLogIn = async (data) => {
   // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
   const client = await pool.connect();
   let logIn = false;
+  let result = "";
 
   try {
     // Iniciamos la transaccion
     await client.query("BEGIN");
 
+    //Verificamos si ya existe otra sesion
+    const existLogin = await client.query(
+      `SELECT 1 FROM refresh_tokens WHERE usuario_id = $1`,
+      [data.usuarioid],
+    );
+
+    // Si existe le decimos que ya esta un usuario con esa sesion
+    if (existLogin.rowCount > 0) {
+      let error = Error(
+        "Ya existe una sesion activa con el usuario ingresado.",
+      );
+      error.status = 400;
+      throw error;
+    }
+
     // Realizamos las inserciones en las tablas
-    let result = await client.query(
+    result = await client.query(
       `INSERT INTO refresh_tokens (usuario_id, expires_at, token_hash)
        VALUES ($1,NOW() + INTERVAL '1 hour',$2)
        RETURNING usuario_id AS usuarioId
@@ -202,4 +219,59 @@ exports.registerLogIn = async (data) => {
   }
 
   return logIn;
+};
+
+// Funcion para eliminar el registro del login
+exports.deleteLogIn = async (data) => {
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+  let logOut = false;
+
+  try {
+    // Iniciamos la transaccion
+    await client.query("BEGIN");
+
+    //Verificamos si ya existe otra sesion
+    const existLogin = await client.query(
+      `SELECT 1 FROM refresh_tokens WHERE token_hash = $1`,
+      [data.token],
+    );
+
+    if (!existLogin.rowCount > 0) {
+      let error = Error(
+        "Ya se habia eliminad una sesion activa con el usuario ingresado.",
+      );
+      error.status = 400;
+      throw error;
+    }
+
+    // Realizamos las inserciones en las tablas
+    let result = await client.query(
+      `DELETE FROM refresh_tokens
+       WHERE token_hash = $1
+       RETURNING *
+      `,
+      [data.token],
+    );
+
+    //Verificamos si se registro el login
+    if (!result.rows[0]) {
+      throw new Error(`No se logro eliminar el inicio de sesion.`);
+    }
+
+    // Aceptamos cambios
+    await client.query("COMMIT");
+
+    logOut = true;
+  } catch (err) {
+    //Salio algo mal hacemos un rollback
+    await client.query("ROLLBACK");
+    logOut = false;
+    throw err;
+  } finally {
+    //Liberamos la conexion
+    client.release();
+  }
+
+  return logOut;
 };

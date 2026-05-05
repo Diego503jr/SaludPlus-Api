@@ -58,10 +58,19 @@ exports.login = async (data) => {
     token: token_jwt,
   };
 
+  const loginRegistered = await usuarioModel.registerLogIn(user);
+
   // Registramos el token para usarlo por autenticacion en la app en funcionalidades a usar
-  if (!usuarioModel.registerLogIn(user)) {
+  if (!loginRegistered) {
     throw new Error("No se logro iniciar sesion por el token.");
   }
 
   return user;
+};
+
+// Funcion de service para realizar el logout
+exports.logout = async (data) => {
+  const result = await usuarioModel.deleteLogIn(data.body);
+
+  return result;
 };

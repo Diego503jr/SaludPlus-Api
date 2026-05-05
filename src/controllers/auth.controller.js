@@ -40,3 +40,22 @@ exports.login = async (req, res) => {
     });
   }
 };
+
+exports.logout = async (req, res) => {
+  try {
+    // const data = await
+    const data = await authService.logout(req);
+
+    res.status(200).json({
+      success: true,
+      data: data,
+      meesage: "Logout Correctamente",
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({
+      success: false,
+      data: {},
+      message: err.message,
+    });
+  }
+};
