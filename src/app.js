@@ -15,12 +15,6 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/medico", medicoRoutes);
 app.use("/admin", adminRoutes);
-app.use("/citas", medicoRoutes);
-app.use("/medicina", medicoRoutes);
-app.use("/asistencia", medicoRoutes);
-app.use("/paciente", medicoRoutes);
-app.use("/receta", medicoRoutes);
-app.use("/recetaMedicamento", medicoRoutes);
 app.use("/paciente", pacienteRoutes);
 
 module.exports = app;

@@ -8,6 +8,7 @@ exports.getMedicine = async (req, res) => {
         // Llamamos al servicio pasando el ID (si no viene, será undefined/null)
         const medicine = await medicamentoService.getMedicine(medicineId);
 
+        //Respuesta exitosa
         return res.status(200).json({
             success: true,
             data: medicine,
@@ -15,6 +16,7 @@ exports.getMedicine = async (req, res) => {
         });
 
     } catch (error) {
+        //Error
         console.error("Error al obtener medicamentos:", error.message);
         const statusCode = error.message.includes("No se encontró") ? 404 : 500;
 

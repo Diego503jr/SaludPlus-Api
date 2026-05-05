@@ -3,10 +3,13 @@ const citaService = require("../services/cita.service");
 // TODAS LAS CITAS DE MÉDICO LOGEADO
 exports.GetAppointments = async (req, res) => {
     try {
+        //Id de médico por token
         const userId = req.user.id;
 
+        //Consulta al servicio
         const appointments = await citaService.GetAppointments(userId);
 
+        //Respuesta exitosa
         return res.status(200).json({
             data: appointments,
             message: "Citas de médico.",
@@ -14,6 +17,7 @@ exports.GetAppointments = async (req, res) => {
         });
 
     } catch (error) {
+        //Error
         console.error("Error en al obtener información de citas.", error.message);
 
         const statusCode = error.message.includes("No se encontró") ? 404 : 500;

@@ -5,6 +5,7 @@ exports.findMedicoLogged = async (id) => {
   const client = await pool.connect();
 
   try {
+    //Consulta SQL uniendo tablas usuarios y medicos
     const query = `
         SELECT 
             U.id, U.nombre, U.apellido, U.dui, U.email, U.telefono,
@@ -24,11 +25,12 @@ exports.findMedicoLogged = async (id) => {
       throw new Error(`No existe el médico con el ID: ${id}`);
     }
 
+    //Retornamos el resultado encontrado
     return response.rows[0];
   } catch (err) {
     throw err;
   } finally {
-    client.release();
+    client.release(); //Liberar conexión 
   }
 };
 

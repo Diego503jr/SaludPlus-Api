@@ -1,6 +1,8 @@
 const pool = require("../config/db");
 
+//FUNCIÓN PARA CREAR DETALLE DE RECETA
 exports.createReceta = async (detalleReceta, client) => {
+  //Desestructuramos los datos recibidos
   const {
     recetaId,
     medicamentoId,
@@ -10,6 +12,7 @@ exports.createReceta = async (detalleReceta, client) => {
     instrucciones,
   } = detalleReceta;
 
+  //Consulta para la creación
   const query = `
     INSERT INTO receta_medicamento (
       receta_id, 
@@ -31,11 +34,14 @@ exports.createReceta = async (detalleReceta, client) => {
     instrucciones || null,
   ];
 
+  //Ejecutamos consulta 
   const response = await client.query(query, values);
 
+  //Si no se puede crear detalle receta
   if (response.rowCount === 0) {
     throw new Error(`No se pudo insertar el medicamento ${medicamentoId}`);
   }
 
+  //Devolvemos objeto
   return response.rows[0];
 };
