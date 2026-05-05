@@ -12,12 +12,12 @@ const recetaMedicamentoController = require("../controllers/recetaMedicamento.co
 
 
 router.get('/profile', authMiddleware, medicoController.findMedicoLogged);
-router.patch('/update/:id', asistenciaController.marcarAsistencia);
-router.get('/allAppointments', authMiddleware, citaController.GetAppointments);
-router.patch('/historial/update/:id', historialPacienteController.updateHistorialPaciente);
-router.get('/get/:medicineId?', medicamentoController.getMedicine);
-router.get('/information/:patientId', pacienteController.GetPatientInfo);
-router.post('/create/:id', authMiddleware, recetaController.createReceta);
-router.post('/create/', recetaMedicamentoController.createDetalleReceta);
+router.patch('/asistencia/update/:id', asistenciaController.marcarAsistencia);
+router.get('/citas/allAppointments', authMiddleware, citaController.GetAppointments);
+router.patch('/paciente/historial/update/:id', historialPacienteController.updateHistorialPaciente);
+router.get('/medicina/:medicineId?', medicamentoController.getMedicine);
+router.get('/historialPaciente/information/:patientId', pacienteController.GetPatientInfo);
+router.post('/receta/create/:id', authMiddleware, recetaController.createReceta);
+router.post('/receta/medicamento/create/', recetaMedicamentoController.createDetalleReceta);
 
 module.exports = router;
