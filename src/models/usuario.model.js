@@ -1,5 +1,4 @@
 const pool = require("../config/db");
-const { logout } = require("../controllers/auth.controller");
 
 // Funcion by paciente (LOGIN)
 exports.findByPacient = async (user) => {
