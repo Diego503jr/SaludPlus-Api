@@ -180,14 +180,14 @@ exports.registerLogIn = async (data) => {
       [data.usuarioid],
     );
 
-    // Si existe le decimos que ya esta un usuario con esa sesion
-    if (existLogin.rowCount > 0) {
-      let error = Error(
-        "Ya existe una sesion activa con el usuario ingresado.",
-      );
-      error.status = 400;
-      throw error;
-    }
+    // // Si existe le decimos que ya esta un usuario con esa sesion
+    // if (existLogin.rowCount > 0) {
+    //   let error = Error(
+    //     "Ya existe una sesion activa con el usuario ingresado.",
+    //   );
+    //   error.status = 400;
+    //   throw error;
+    // }
 
     // Realizamos las inserciones en las tablas
     result = await client.query(
