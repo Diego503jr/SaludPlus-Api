@@ -30,7 +30,7 @@ exports.findMedicoLogged = async (id) => {
   } catch (err) {
     throw err;
   } finally {
-    client.release(); //Liberar conexión 
+    client.release(); //Liberar conexión
   }
 };
 
@@ -129,7 +129,7 @@ exports.read = async () => {
 
     let result = await client.query(
       `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.telefono, U.fecha_nacimiento AS fechaNacimiento
-        , U.genero, U.rol_id AS rolId, U.activo, M.num_jvpm AS numJvpm, M.especialidad_id AS especialidadId, M.unidad_medica_id AS unidadMedicaId
+        , U.genero, U.rol_id AS rolId, U.activo, M.id, M.num_jvpm AS numJvpm, M.especialidad_id AS especialidadId, M.unidad_medica_id AS unidadMedicaId
        FROM medicos M 
        LEFT JOIN usuarios U ON U.id = M.usuario_id`,
     );
