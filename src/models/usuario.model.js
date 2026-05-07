@@ -11,10 +11,11 @@ exports.findByPacient = async (user) => {
 
     let result = await client.query(
       `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono, U.fecha_nacimiento AS fechaNacimiento
-          , U.genero, U.rol_id AS rolId, P.estado_familiar AS estadoFamiliar, P.num_afiliado AS numAfiliado, P.tipo_sangre AS tipoSangre
+          , U.genero, U.rol_id AS rolId, R.nombre AS rolNombre, P.estado_familiar AS estadoFamiliar, P.num_afiliado AS numAfiliado, P.tipo_sangre AS tipoSangre
           , P.alergias, P.condiciones_cronicas AS condicionesCronicas, P.nota_clinica AS notaClinica, P.medicamentos_recurrente AS medicamentosRecurrente
          FROM pacientes P 
           INNER JOIN usuarios U ON U.id = P.usuario_id
+		      INNER JOIN roles R ON R.id = U.rol_id
          WHERE P.num_afiliado = $1`,
       [user.numAfiliado],
     );
@@ -50,9 +51,13 @@ exports.findByMedic = async (user) => {
 
     let result = await client.query(
       `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono, U.fecha_nacimiento AS fechaNacimiento
-          , U.genero, U.rol_id AS rolId, M.num_jvpm AS numJvpm, M.especialidad_id AS especialidadId, M.unidad_medica_id AS unidadMedicaId
+          , U.genero, U.rol_id AS rolId, R.nombre AS rolNombre, M.num_jvpm AS numJvpm, M.especialidad_id AS especialidadId
+          , E.nombre AS especialidadNombre, M.unidad_medica_id AS unidadMedicaId, UM.nombre AS unidadMedicaNombre
          FROM medicos M 
           INNER JOIN usuarios U ON U.id = M.usuario_id
+          INNER JOIN roles R ON R.id = U.rol_id
+          INNER JOIN especialidades E ON E.id = M.especialidad_id
+          INNER JOIN unidades_medicas UM ON UM.id = M.unidad_medica_id
          WHERE M.num_jvpm = $1`,
       [user.numJvpm],
     );
