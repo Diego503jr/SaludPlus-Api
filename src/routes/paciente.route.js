@@ -3,28 +3,28 @@ const router = express.Router();
 
 // Importamos el controlador de citas
 const citaController = require('../controllers/cita.controller');
+const pacienteController = require('../controllers/paciente.controller');
 
 // RUTAS DEL PACIENTE
 
 // RUTA: Obtener las próximas citas del paciente (Pendientes o Confirmadas)
-router.get('/proximas/:pacienteId', citaController.obtenerProximasCitas);
-//RUTA: Obtener lista de especialidad
-router.get('/especialidades', citaController.getEspecialidades);
-// RUTA: Obtener unidades médicas filtradas por especialidad
-router.get('/unidades-medicas/:idEspecialidad', citaController.getUnidadesMedicas);
+router.get('/proximas/:usuarioId', citaController.obtenerProximasCitas);
+
 // RUTA: Obtener horas disponibles que no chocan
 router.get('/horarios-disponibles', citaController.getHorarios);
+
 // RUTA: Obtener historial completo (separado en Próximas y Pasadas)
-router.get('/historial/:pacienteId', citaController.getHistorial);
+router.get('/historial/:usuarioId', citaController.getHistorial);
+
 // RUTA: Obtener unidades para el mapa con sus coordenadas
 router.get('/unidades-mapa', citaController.getUnidadesMapa);
-// RUTA: Obtener el perfil completo del paciente (Datos generales + ISSS)
-router.get('/perfil/:pacienteId', citaController.getPerfilPaciente);
 
 // RUTA: Guardar una cita nueva en la base de datos
 router.post('/agendar', citaController.crearCita);
 
+//RUTAS DE PERFIL
+
 // RUTA: Actualizar datos de contacto y médicos del paciente
-router.put('/perfil/:pacienteId', citaController.actualizarPerfilPaciente);
+router.put('/perfil/:usuarioId', pacienteController.actualizarPerfilPaciente);
 
 module.exports = router;

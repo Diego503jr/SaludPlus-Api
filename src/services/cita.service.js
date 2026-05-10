@@ -52,28 +52,6 @@ exports.obtenerCitasProximas = async (idPaciente) => {
     }
 };
 
-//SOLICITAR CITA): SERVICIO DE ESPECIALIDADES
-
-exports.obtenerEspecialidades = async () => {
-    try {
-        const especialidades = await citaModel.obtenerEspecialidadesActivas();
-        return especialidades;
-    } catch (error) {
-        throw error;
-    }
-};
-
-
-//(SOLICITAR CITA): SERVICIO DE UNIDADES MÉDICAS
-exports.obtenerUnidades = async (idEspecialidad) => {
-    try {
-        const unidades = await citaModel.obtenerUnidadesPorEspecialidad(idEspecialidad);
-        return unidades;
-    } catch (error) {
-        throw error;
-    }
-};
-
 // PASO 3 (SOLICITAR CITA): SERVICIO DE HORARIOS
 
 // Función auxiliar para sumar 30 minutos a las horas
@@ -129,9 +107,9 @@ exports.obtenerHorariosDisponibles = async (unidadId, especialidadId, fecha) => 
 };
 
 // HISTORIAL DE CITAS: SERVICIO PARA SEPARAR PRÓXIMAS Y PASADAS
-exports.obtenerHistorialCitas = async (idPaciente) => {
+exports.obtenerHistorialCitas = async (idUsuario) => {
     try {
-        const citas = await citaModel.obtenerHistorialCompleto(idPaciente);
+        const citas = await citaModel.obtenerHistorialPaciente(idUsuario); 
         
         const proximas = [];
         const pasadas = [];
@@ -150,7 +128,6 @@ exports.obtenerHistorialCitas = async (idPaciente) => {
                 nombreDoctor = `Dr. ${cita.doctor_nombre} ${cita.doctor_apellido}`;
             }
 
-            //Formateamos el objeto tal como lo pide el Frontend
             const citaFormateada = {
                 id: cita.cita_id,
                 estado: cita.estado,
@@ -161,7 +138,6 @@ exports.obtenerHistorialCitas = async (idPaciente) => {
                 doctor: nombreDoctor
             };
 
-            // 3. Lógica de separación
             const fechaCita = new Date(cita.fecha_solicitada);
             fechaCita.setHours(0, 0, 0, 0);
 
@@ -172,7 +148,7 @@ exports.obtenerHistorialCitas = async (idPaciente) => {
             }
         });
 
-        // Devolvemos un objeto con los dos arreglos
+
         return { proximas, pasadas };
 
     } catch (error) {
@@ -198,29 +174,6 @@ exports.obtenerUnidadesMapa = async () => {
 };
 
 
-// PERFIL DEL PACIENTE: SERVICIO
-exports.obtenerPerfil = async (idPaciente) => {
-    try {
-        const perfil = await citaModel.obtenerPerfilPaciente(idPaciente);
-        
-        if (!perfil) {
-            return null; // Si no existe, devolvemos null 
-        }
-
-        // Limpiamos los datos nulos
-        return {
-            ...perfil,
-            telefono: perfil.telefono || "No registrado",
-            tipo_sangre: perfil.tipo_sangre || "No especificado",
-            alergias: perfil.alergias || "Ninguna registrada",
-            condiciones_cronicas: perfil.condiciones_cronicas || "Ninguna registrada"
-        };
-
-    } catch (error) {
-        throw error;
-    }
-};
-
 // ==========================================
 // GUARDAR CITA (POST): SERVICIO
 // ==========================================
@@ -237,19 +190,3 @@ exports.agendarCita = async (citaData) => {
     }
 };
 
-// ==========================================
-// EDITAR PERFIL (PUT): SERVICIO
-// ==========================================
-exports.editarPerfil = async (idPaciente, datos) => {
-    try {
-        await citaModel.actualizarPerfil(idPaciente, datos);
-        
-        // Opcional: Podrías retornar el perfil actualizado completo llamando a la función que hicimos antes
-        return { mensaje: "Perfil actualizado correctamente" };
-    } catch (error) {
-        if (error.message === 'Paciente no encontrado') {
-            throw error;
-        }
-        throw new Error('Error al actualizar en la base de datos');
-    }
-};
