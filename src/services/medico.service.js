@@ -49,7 +49,7 @@ exports.registerMedico = async (data) => {
   };
 
   // Hacemos una llamada al model
-  const result = await medicoModel.create(data);
+  const result = await medicoModel.create(finData);
 
   return result;
 };
