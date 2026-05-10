@@ -81,22 +81,170 @@ exports.read = async () => {
   }
 };
 
+// Funcion para actualizar paciente
+exports.update = async (data) => {
+  const {
+    nombre,
+    apellido,
+    dui,
+    email,
+    password,
+    telefono,
+    fechaNacimiento,
+    genero,
+    rol,
+    activo,
+    estadoFamiliar,
+    numAfiliado,
+    tipoSangre,
+    alergias,
+    condicionesCronicas,
+    notaClinica,
+    medicamentosRecurrentes,
+    id,
+  } = data;
+
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+
+  try {
+    let result = {};
+
+    await client.query("BEGIN");
+
+    // Actualizamos la tabla usuarios
+    let response = await client.query(
+      `UPDATE usuarios 
+     SET nombre = $1,
+         apellido = $2,
+         dui = $3,
+         email = $4,
+         ${password ? "password_hash = $5," : ""}
+         telefono = ${password ? "$6" : "$5"},
+         fecha_nacimiento = ${password ? "$7" : "$6"},
+         genero = ${password ? "$8" : "$7"},
+         rol_id = ${password ? "$9" : "$8"},
+         activo = ${password ? "$10" : "$9"}
+     WHERE id = ${password ? "$11" : "$10"}
+     RETURNING id AS usuariosId, nombre, apellido, dui, email, telefono, 
+               fecha_nacimiento AS fechaNacimiento, genero, rol_id AS rolId, activo`,
+      [
+        nombre,
+        apellido,
+        dui,
+        email,
+        ...(password ? [password] : []),
+        telefono,
+        fechaNacimiento,
+        genero,
+        rol,
+        activo,
+        id,
+      ],
+    );
+
+    if (!response.rows[0]) {
+      throw new Error(`No se encontró el usuario para actualizar.`);
+    }
+
+    result = response.rows[0];
+
+    // Actualizamos la tabla pacientes
+    response = await client.query(
+      `UPDATE pacientes 
+     SET estado_familiar = $1,
+         num_afiliado = $2,
+         tipo_sangre = $3,
+         alergias = $4,
+         condiciones_cronicas = $5,
+         nota_clinica = $6,
+         medicamentos_recurrente = $7
+     WHERE usuario_id = $8
+     RETURNING id AS "idPaciente", 
+               estado_familiar AS "estadoFamiliar",
+               num_afiliado AS "numAfiliado",
+               tipo_sangre AS "tipoSangre", 
+               alergias, 
+               condiciones_cronicas AS "condicionesCronicas", 
+               nota_clinica AS "notaClinica", 
+               medicamentos_recurrente AS "medicamentosRecurrentes"`,
+      [
+        estadoFamiliar,
+        numAfiliado,
+        tipoSangre,
+        alergias,
+        condicionesCronicas,
+        notaClinica,
+        medicamentosRecurrentes,
+        result.usuariosid,
+      ],
+    );
+
+    if (!response.rows[0]) {
+      throw new Error(`No se encontró el paciente para actualizar.`);
+    }
+
+    result = { ...result, ...response.rows[0] };
+
+    await client.query("COMMIT");
+
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    if (err?.message?.includes("llave duplicada")) err.status = 409;
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+// Funcion para pasar a inactivo al paciente
+exports.delete = async (id) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Solo cambiamos el activo a false en la tabla usuarios
+    const result = await client.query(
+      `UPDATE usuarios 
+         SET activo = false
+       WHERE id = $1
+       RETURNING id AS usuarioId, activo`,
+      [id],
+    );
+
+    // Verificamos que el usuario exista
+    if (!result.rows[0]) {
+      throw new Error(`No se encontró el usuario.`);
+    }
+
+    await client.query("COMMIT");
+
+    return result.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 // EDITAR PERFIL: MODELO
 exports.actualizarPerfil = async (idUsuario, datos) => {
   const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
-    const pacQuery = 'SELECT id FROM pacientes WHERE usuario_id = $1';
+    const pacQuery = "SELECT id FROM pacientes WHERE usuario_id = $1";
     const pacRes = await client.query(pacQuery, [idUsuario]);
 
     if (pacRes.rows.length === 0) {
-        throw new Error('Paciente no encontrado');
+      throw new Error("Paciente no encontrado");
     }
-    
 
-    const idPaciente = pacRes.rows[0].id; 
+    const idPaciente = pacRes.rows[0].id;
 
     // Actualizamos la tabla 'usuarios' usando el idUsuario
     const updateUsuario = `
@@ -113,16 +261,15 @@ exports.actualizarPerfil = async (idUsuario, datos) => {
       WHERE id = $3;
     `;
     await client.query(updatePaciente, [
-        datos.alergias, 
-        datos.condiciones_cronicas, 
-        idPaciente
+      datos.alergias,
+      datos.condiciones_cronicas,
+      idPaciente,
     ]);
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     return true;
-
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();

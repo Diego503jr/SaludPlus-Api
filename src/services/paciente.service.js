@@ -1,4 +1,5 @@
 const pacienteModel = require("../models/paciente.model");
+const securityLib = require("../utils/security.lib");
 
 //INFORMACIÓN PACIENTE ID
 exports.GetPatientInfo = async (patientId) => {
@@ -35,7 +36,7 @@ exports.GetPatientInfo = async (patientId) => {
   };
 };
 
-// Funcion para obtener todos los clientes
+// Read Pacientes
 exports.readPacientes = async () => {
   let result = await pacienteModel.read();
 
@@ -48,18 +49,53 @@ exports.readPacientes = async () => {
   return result;
 };
 
+// Update Paciente
+exports.updatePaciente = async (id, data) => {
+  // Metemos el id dentro de la data para pasarla completa al model
+  const finData = { ...data, id };
+
+  // Solo hasheamos si mandan password nuevo
+  if (data.password) {
+    finData.password = await securityLib.hash(data.password);
+  }
+
+  // Hacemos una llamada al model
+  const result = await pacienteModel.update(finData);
+
+  if (!result) {
+    const error = Error("Paciente no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  return result;
+};
+
+// Delete Paciente (pasa a inactivo)
+exports.deletePaciente = async (id) => {
+  const result = await pacienteModel.delete(id);
+
+  if (!result) {
+    const error = Error("Paciente no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  return result;
+};
+
 // ==========================================
 // EDITAR PERFIL (PUT): SERVICIO
 // ==========================================
 exports.editarPerfil = async (idPaciente, datos) => {
-    try {
-        await pacienteModel.actualizarPerfil(idPaciente, datos);
+  try {
+    await pacienteModel.actualizarPerfil(idPaciente, datos);
 
-        return { mensaje: "Perfil actualizado correctamente" };
-    } catch (error) {
-        if (error.message === 'Paciente no encontrado') {
-            throw error;
-        }
-        throw new Error('Error al actualizar en la base de datos');
+    return { mensaje: "Perfil actualizado correctamente" };
+  } catch (error) {
+    if (error.message === "Paciente no encontrado") {
+      throw error;
     }
+    throw new Error("Error al actualizar en la base de datos");
+  }
 };

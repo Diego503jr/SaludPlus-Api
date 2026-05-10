@@ -67,7 +67,7 @@ exports.readMedicos = async () => {
   return result;
 };
 
-// Update medicos
+// Update medico
 exports.updateMedico = async (id, data) => {
   // Metemos el id dentro de la data para pasarla completa al model
   const finData = { ...data, id };

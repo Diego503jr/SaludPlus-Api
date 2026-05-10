@@ -39,7 +39,7 @@ exports.GetPatientInfo = async (req, res) => {
   }
 };
 
-// Funcion para acceder a todos los pacientes
+// Read de todos los pacientes
 exports.getPacientes = async (req, res) => {
   try {
     const data = await pacienteService.readPacientes();
@@ -59,38 +59,82 @@ exports.getPacientes = async (req, res) => {
   }
 };
 
+// Update paciente by Id
+exports.updatePaciente = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtenemos la data que nos envia el front-end
+    const data = await pacienteService.updatePaciente(id, req.body);
+
+    // Enviamos la data al front-end
+    res.status(201).json({
+      success: true,
+      data: data,
+      message: "Paciente actualizado correctamente.",
+    });
+  } catch (err) {
+    // Enviamos la data de error al front-end
+    res.status(err.status || 500).json({
+      success: false,
+      data: {},
+      message: err.message,
+    });
+  }
+};
+
+// Delete medico (pasa a inactivo)
+exports.deletePaciente = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pacienteService.deletePaciente(id);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: "Paciente eliminado correctamente.",
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({
+      success: false,
+      data: {},
+      message: err.message,
+    });
+  }
+};
+
 // EDITAR PERFIL: CONTROLADOR
 exports.actualizarPerfilPaciente = async (req, res) => {
-    try {
-        const idUsuario = req.params.usuarioId;
-        const datosBody = req.body;
+  try {
+    const idUsuario = req.params.usuarioId;
+    const datosBody = req.body;
 
-        if (!idUsuario) {
-            return res.status(400).json({
-                exito: false,
-                mensaje: "El ID del usuario es requerido"
-            });
-        }
-        await pacienteService.editarPerfil(idUsuario, datosBody);
-
-        res.status(200).json({
-            exito: true,
-            mensaje: "¡Datos del perfil actualizados con éxito!"
-        });
-
-    } catch (error) {
-        console.error("Error en actualizarPerfilPaciente:", error);
-        
-        if (error.message === 'Paciente no encontrado') {
-            return res.status(404).json({
-                exito: false,
-                mensaje: error.message
-            });
-        }
-
-        res.status(500).json({
-            exito: false,
-            mensaje: "Error interno del servidor al actualizar el perfil"
-        });
+    if (!idUsuario) {
+      return res.status(400).json({
+        exito: false,
+        mensaje: "El ID del usuario es requerido",
+      });
     }
+    await pacienteService.editarPerfil(idUsuario, datosBody);
+
+    res.status(200).json({
+      exito: true,
+      mensaje: "¡Datos del perfil actualizados con éxito!",
+    });
+  } catch (error) {
+    console.error("Error en actualizarPerfilPaciente:", error);
+
+    if (error.message === "Paciente no encontrado") {
+      return res.status(404).json({
+        exito: false,
+        mensaje: error.message,
+      });
+    }
+
+    res.status(500).json({
+      exito: false,
+      mensaje: "Error interno del servidor al actualizar el perfil",
+    });
+  }
 };
