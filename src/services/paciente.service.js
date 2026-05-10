@@ -47,3 +47,19 @@ exports.readPacientes = async () => {
 
   return result;
 };
+
+// ==========================================
+// EDITAR PERFIL (PUT): SERVICIO
+// ==========================================
+exports.editarPerfil = async (idPaciente, datos) => {
+    try {
+        await pacienteModel.actualizarPerfil(idPaciente, datos);
+
+        return { mensaje: "Perfil actualizado correctamente" };
+    } catch (error) {
+        if (error.message === 'Paciente no encontrado') {
+            throw error;
+        }
+        throw new Error('Error al actualizar en la base de datos');
+    }
+};

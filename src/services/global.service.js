@@ -14,3 +14,13 @@ exports.readAllEspecialidades = async () => {
 exports.readAllUnidadesMedicas = async () => {
   return await globalModel.readUnidadesMedicas();
 };
+
+//Funcion para obtener las Unidades Medicas
+exports.obtenerUnidades = async (idEspecialidad) => {
+    try {
+        const unidades = await globalModel.obtenerUnidadesPorEspecialidad(idEspecialidad);
+        return unidades;
+    } catch (error) {
+        throw error;
+    }
+};

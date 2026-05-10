@@ -58,3 +58,39 @@ exports.getPacientes = async (req, res) => {
     });
   }
 };
+
+// EDITAR PERFIL: CONTROLADOR
+exports.actualizarPerfilPaciente = async (req, res) => {
+    try {
+        const idUsuario = req.params.usuarioId;
+        const datosBody = req.body;
+
+        if (!idUsuario) {
+            return res.status(400).json({
+                exito: false,
+                mensaje: "El ID del usuario es requerido"
+            });
+        }
+        await pacienteService.editarPerfil(idUsuario, datosBody);
+
+        res.status(200).json({
+            exito: true,
+            mensaje: "¡Datos del perfil actualizados con éxito!"
+        });
+
+    } catch (error) {
+        console.error("Error en actualizarPerfilPaciente:", error);
+        
+        if (error.message === 'Paciente no encontrado') {
+            return res.status(404).json({
+                exito: false,
+                mensaje: error.message
+            });
+        }
+
+        res.status(500).json({
+            exito: false,
+            mensaje: "Error interno del servidor al actualizar el perfil"
+        });
+    }
+};

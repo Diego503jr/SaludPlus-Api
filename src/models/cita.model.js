@@ -5,7 +5,7 @@ exports.obtenerProximasPorPaciente = async (idPaciente) => {
   const client = await pool.connect();
 
   try {
-    const query = `
+   const query = `
       SELECT 
           c.id AS cita_id,
           e.nombre AS especialidad,
@@ -15,12 +15,13 @@ exports.obtenerProximasPorPaciente = async (idPaciente) => {
           u.nombre AS doctor_nombre,
           u.apellido AS doctor_apellido
       FROM citas c
+      INNER JOIN pacientes p ON c.paciente_id = p.id
       INNER JOIN estados_cita ec ON c.estado_id = ec.id
       INNER JOIN especialidades e ON c.especialidad_id = e.id
       INNER JOIN unidades_medicas um ON c.unidad_medica_id = um.id
       LEFT JOIN medicos m ON c.medico_id = m.id
       LEFT JOIN usuarios u ON m.usuario_id = u.id
-      WHERE c.paciente_id = $1 
+      WHERE p.usuario_id = $1
         AND ec.nombre IN ('pendiente', 'confirmada')
       ORDER BY c.fecha_solicitada ASC, c.hora_asignada ASC;
     `;
@@ -40,57 +41,6 @@ exports.obtenerProximasPorPaciente = async (idPaciente) => {
   }
 };
 
-
-// PASO 1 (SOLICITAR CITA): OBTENER ESPECIALIDADES ACTIVAS
-exports.obtenerEspecialidadesActivas = async () => {
-  const client = await pool.connect();
-
-  try {
-
-    const query = `
-      SELECT id, nombre, descripcion 
-      FROM especialidades 
-      WHERE activo = true
-      ORDER BY nombre ASC;
-    `;
-
-    const response = await client.query(query);
-    return response.rows;
-
-  } catch (err) {
-    throw err;
-  } finally {
-    client.release();
-  }
-};
-
-// PASO 2 (SOLICITAR CITA): OBTENER UNIDADES MÉDICAS POR ESPECIALIDAD
-exports.obtenerUnidadesPorEspecialidad = async (idEspecialidad) => {
-  const client = await pool.connect();
-
-  try {
-    const query = `
-      SELECT 
-          um.id, 
-          um.nombre, 
-          um.direccion 
-      FROM unidades_medicas um
-      INNER JOIN unidad_especialidad ue ON um.id = ue.unidad_medica_id
-      WHERE ue.especialidad_id = $1 
-        AND um.activo = true 
-        AND ue.activo = true
-      ORDER BY um.nombre ASC;
-    `;
-
-    const response = await client.query(query, [idEspecialidad]);
-    return response.rows;
-
-  } catch (err) {
-    throw err;
-  } finally {
-    client.release();
-  }
-};
 
 // PASO 3 (SOLICITAR CITA): MODELOS PARA HORARIOS
 
@@ -137,31 +87,34 @@ exports.obtenerHorasOcupadas = async (unidadId, especialidadId, fecha) => {
 };
 
 // HISTORIAL DE CITAS: OBTENER TODAS LAS CITAS DEL PACIENTE
-exports.obtenerHistorialCompleto = async (idPaciente) => {
+exports.obtenerHistorialPaciente = async (idUsuario) => {
   const client = await pool.connect();
 
   try {
     const query = `
       SELECT 
           c.id AS cita_id,
-          ec.nombre AS estado,
           e.nombre AS especialidad,
           c.fecha_solicitada,
           c.hora_asignada,
           um.nombre AS unidad_medica,
-          u.nombre AS doctor_nombre,
-          u.apellido AS doctor_apellido
+          ec.nombre AS estado,
+          u_med.nombre AS doctor_nombre,
+          u_med.apellido AS doctor_apellido
       FROM citas c
-      INNER JOIN estados_cita ec ON c.estado_id = ec.id
+      -- UNIMOS con pacientes para poder filtrar por usuario_id
+      INNER JOIN pacientes p ON c.paciente_id = p.id
       INNER JOIN especialidades e ON c.especialidad_id = e.id
       INNER JOIN unidades_medicas um ON c.unidad_medica_id = um.id
+      INNER JOIN estados_cita ec ON c.estado_id = ec.id
       LEFT JOIN medicos m ON c.medico_id = m.id
-      LEFT JOIN usuarios u ON m.usuario_id = u.id
-      WHERE c.paciente_id = $1
-      ORDER BY c.fecha_solicitada DESC, c.hora_asignada DESC;
+      LEFT JOIN usuarios u_med ON m.usuario_id = u_med.id
+      -- FILTRAMOS usando el usuario_id que viene de la app móvil
+      WHERE p.usuario_id = $1
+      ORDER BY c.fecha_solicitada DESC;
     `;
 
-    const response = await client.query(query, [idPaciente]);
+    const response = await client.query(query, [idUsuario]);
     return response.rows;
 
   } catch (err) {
@@ -198,37 +151,6 @@ exports.obtenerUnidadesParaMapa = async () => {
 
     const response = await client.query(query);
     return response.rows;
-
-  } catch (err) {
-    throw err;
-  } finally {
-    client.release();
-  }
-};
-
-// PERFIL DEL PACIENTE: OBTENER DATOS GENERALES Y MÉDICOS
-exports.obtenerPerfilPaciente = async (idPaciente) => {
-  const client = await pool.connect();
-
-  try {
-    const query = `
-      SELECT 
-          u.nombre, 
-          u.apellido, 
-          u.dui, 
-          u.email, 
-          u.telefono,
-          p.num_afiliado, 
-          p.tipo_sangre, 
-          p.alergias, 
-          p.condiciones_cronicas
-      FROM pacientes p
-      INNER JOIN usuarios u ON p.usuario_id = u.id
-      WHERE p.id = $1;
-    `;
-
-    const response = await client.query(query, [idPaciente]);
-    return response.rows[0]; // Retornamos solo un objeto, no un arreglo
 
   } catch (err) {
     throw err;
@@ -324,52 +246,3 @@ exports.crearCita = async (citaData) => {
   }
 };
 
-// ==========================================
-// EDITAR PERFIL (PUT): ACTUALIZAR USUARIO Y PACIENTE
-// ==========================================
-exports.actualizarPerfil = async (idPaciente, datos) => {
-  const client = await pool.connect();
-
-  try {
-    // Iniciamos la transacción: Si una tabla falla, la otra no se actualiza
-    await client.query('BEGIN');
-
-    // 1. Primero averiguamos cuál es el ID del usuario ligado a este paciente
-    const userQuery = 'SELECT usuario_id FROM pacientes WHERE id = $1';
-    const userRes = await client.query(userQuery, [idPaciente]);
-
-    if (userRes.rows.length === 0) {
-        throw new Error('Paciente no encontrado');
-    }
-    const idUsuario = userRes.rows[0].usuario_id;
-
-    // 2. Actualizamos la tabla 'usuarios' (solo telefono)
-    const updateUsuario = `
-      UPDATE usuarios 
-      SET telefono = COALESCE($1, telefono)
-      WHERE id = $2;
-    `;
-    await client.query(updateUsuario, [datos.telefono, idUsuario]);
-
-   // 3. Actualizamos la tabla 'pacientes' (alergias y condiciones)
-    const updatePaciente = `
-      UPDATE pacientes 
-      SET alergias = COALESCE($1, alergias),
-          condiciones_cronicas = COALESCE($2, condiciones_cronicas)
-      WHERE id = $3;
-    `;
-    // Pasamos solo 3 parámetros ahora
-    await client.query(updatePaciente, [datos.alergias, datos.condiciones_cronicas, idPaciente]);
-
-    // Si todo salió bien, guardamos los cambios definitivamente
-    await client.query('COMMIT');
-    return true;
-
-  } catch (err) {
-    // Si algo falló, deshacemos cualquier cambio a la mitad para evitar datos corruptos
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-};

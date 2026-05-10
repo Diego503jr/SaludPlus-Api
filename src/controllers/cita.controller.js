@@ -33,7 +33,7 @@ exports.GetAppointments = async (req, res) => {
 exports.obtenerProximasCitas = async (req, res) => {
     try {
         // Obtenemos el ID del paciente desde la URL
-        const idPaciente = req.params.pacienteId; 
+        const idPaciente = req.params.pacienteId;
 
         if (!idPaciente) {
             return res.status(400).json({
@@ -58,55 +58,6 @@ exports.obtenerProximasCitas = async (req, res) => {
     }
 };
 
-
-// SOLICITAR CITA: CONTROLADOR DE ESPECIALIDADES
-exports.getEspecialidades = async (req, res) => {
-    try {
-        const especialidades = await citaService.obtenerEspecialidades();
-
-        res.status(200).json({
-            exito: true,
-            datos: especialidades
-        });
-
-    } catch (error) {
-        console.error("Error en getEspecialidades:", error);
-        res.status(500).json({
-            exito: false,
-            mensaje: "Error interno del servidor"
-        });
-    }
-};
-
-
-//(SOLICITAR CITA): CONTROLADOR DE UNIDADES MÉDICAS
-exports.getUnidadesMedicas = async (req, res) => {
-    try {
-        // Atrapamos el ID de la especialidad que viene en la URL
-        const idEspecialidad = req.params.idEspecialidad;
-
-        if (!idEspecialidad) {
-            return res.status(400).json({
-                exito: false,
-                mensaje: "El ID de la especialidad es requerido"
-            });
-        }
-
-        const unidades = await citaService.obtenerUnidades(idEspecialidad);
-
-        res.status(200).json({
-            exito: true,
-            datos: unidades
-        });
-
-    } catch (error) {
-        console.error("Error en getUnidadesMedicas:", error);
-        res.status(500).json({
-            exito: false,
-            mensaje: "Error interno del servidor"
-        });
-    }
-};
 
 // PASO 3 (SOLICITAR CITA): CONTROLADOR DE HORARIOS
 exports.getHorarios = async (req, res) => {
@@ -140,16 +91,16 @@ exports.getHorarios = async (req, res) => {
 // HISTORIAL DE CITAS: CONTROLADOR
 exports.getHistorial = async (req, res) => {
     try {
-        const idPaciente = req.params.pacienteId;
+        const idUsuario = req.params.usuarioId;
 
-        if (!idPaciente) {
+        if (!idUsuario) {
             return res.status(400).json({
                 exito: false,
-                mensaje: "El ID del paciente es requerido"
+                mensaje: "El ID del usuario es requerido"
             });
         }
 
-        const historial = await citaService.obtenerHistorialCitas(idPaciente);
+        const historial = await citaService.obtenerHistorialCitas(idUsuario);
 
         res.status(200).json({
             exito: true,
@@ -160,7 +111,7 @@ exports.getHistorial = async (req, res) => {
         console.error("Error en getHistorial:", error);
         res.status(500).json({
             exito: false,
-            mensaje: "Error interno del servidor"
+            mensaje: "Error interno del servidor al obtener el historial"
         });
     }
 };
@@ -184,55 +135,19 @@ exports.getUnidadesMapa = async (req, res) => {
     }
 };
 
-// ==========================================
-// PERFIL DEL PACIENTE: CONTROLADOR
-// ==========================================
-exports.getPerfilPaciente = async (req, res) => {
-    try {
-        const idPaciente = req.params.pacienteId;
-
-        if (!idPaciente) {
-            return res.status(400).json({
-                exito: false,
-                mensaje: "El ID del paciente es requerido"
-            });
-        }
-
-        const perfil = await citaService.obtenerPerfil(idPaciente);
-
-        if (!perfil) {
-            return res.status(404).json({
-                exito: false,
-                mensaje: "Paciente no encontrado"
-            });
-        }
-
-        res.status(200).json({
-            exito: true,
-            datos: perfil
-        });
-
-    } catch (error) {
-        console.error("Error en getPerfilPaciente:", error);
-        res.status(500).json({
-            exito: false,
-            mensaje: "Error interno del servidor al cargar el perfil"
-        });
-    }
-};
 
 // ==========================================
 // GUARDAR CITA (POST): CONTROLADOR
 // ==========================================
 exports.crearCita = async (req, res) => {
     try {
-        const { 
-            paciente_id, 
-            especialidad_id, 
-            unidad_medica_id, 
-            fecha_solicitada, 
-            hora_asignada, 
-            motivo_consulta 
+        const {
+            paciente_id,
+            especialidad_id,
+            unidad_medica_id,
+            fecha_solicitada,
+            hora_asignada,
+            motivo_consulta
         } = req.body;
 
         // Validar que el frontend nos mande todos los campos requeridos
@@ -253,7 +168,7 @@ exports.crearCita = async (req, res) => {
 
     } catch (error) {
         console.error("Error en crearCita:", error);
-        
+
         // Manejo del error de cita duplicada que mandamos desde el servicio
         if (error.message.includes('Ya tienes una cita')) {
             return res.status(409).json({
@@ -269,41 +184,3 @@ exports.crearCita = async (req, res) => {
     }
 };
 
-// ==========================================
-// EDITAR PERFIL (PUT): CONTROLADOR
-// ==========================================
-exports.actualizarPerfilPaciente = async (req, res) => {
-    try {
-        const idPaciente = req.params.pacienteId;
-        const datosBody = req.body;
-
-        if (!idPaciente) {
-            return res.status(400).json({
-                exito: false,
-                mensaje: "El ID del paciente es requerido en la URL"
-            });
-        }
-
-        await citaService.editarPerfil(idPaciente, datosBody);
-
-        res.status(200).json({
-            exito: true,
-            mensaje: "¡Datos del perfil actualizados con éxito!"
-        });
-
-    } catch (error) {
-        console.error("Error en actualizarPerfilPaciente:", error);
-        
-        if (error.message === 'Paciente no encontrado') {
-            return res.status(404).json({
-                exito: false,
-                mensaje: error.message
-            });
-        }
-
-        res.status(500).json({
-            exito: false,
-            mensaje: "Error interno del servidor al actualizar el perfil"
-        });
-    }
-};
