@@ -131,7 +131,7 @@ exports.read = async () => {
       `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.telefono, U.fecha_nacimiento AS fechaNacimiento
         , U.genero, U.rol_id AS rolId, R.nombre AS rolNombre, U.activo, M.id, M.num_jvpm AS numJvpm
         , M.especialidad_id AS especialidadId, E.nombre AS especialidadNombre, M.unidad_medica_id AS unidadMedicaId
-        , UM.nombre
+        , UM.nombre AS unidadMedicaNombre
        FROM medicos M 
         LEFT JOIN usuarios U ON U.id = M.usuario_id
         INNER JOIN roles R ON R.id = U.rol_id
