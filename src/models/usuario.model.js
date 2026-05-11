@@ -82,6 +82,56 @@ exports.findByMedic = async (user) => {
   }
 };
 
+exports.findByAdmin = async (user) => {
+  // Verificamos si es superAdmin
+  if (user?.superAdmin) {
+    if (user.superAdmin !== "saludplusadminisss503") {
+      const error = Error("No tiene permisos para acceder");
+      error.status = 403;
+      throw error;
+    }
+  } else {
+    const error = Error("No tiene permisos para acceder");
+    error.status = 403;
+    throw error;
+  }
+
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+
+  try {
+    // Iniciamos la transaccion
+    await client.query("BEGIN");
+
+    let result = await client.query(
+      `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono
+        , U.fecha_nacimiento AS fechaNacimiento, U.genero, U.rol_id AS rolId, R.nombre AS rolNombre
+        FROM usuarios U
+		      INNER JOIN roles R ON R.id = U.rol_id
+        WHERE U.email = $1`,
+      [user.email],
+    );
+
+    // Verificamos si el usuario tiene asignado un (Paciente/Medico)
+    if (!result.rows[0]) {
+      throw new Error(`No se encontro el admin.`);
+    }
+
+    // Aceptamos cambios
+    await client.query("COMMIT");
+
+    // Retornamos el result por default de la db
+    return result.rows[0];
+  } catch (err) {
+    // Salio algo mal hacemos un rollback
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    // Liberamos la conexion
+    client.release();
+  }
+};
+
 // Funcion para crear un Paciente
 exports.createPaciente = async (user) => {
   // Hacemos un destructuring del objeto que traemos de user

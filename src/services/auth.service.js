@@ -23,10 +23,12 @@ exports.login = async (data) => {
   let result = null;
 
   // Hacemos una llamada al model con base al rol
-  if (data.rol == 1) {
+  if (data.rol === 1) {
     result = await usuarioModel.findByPacient(data);
-  } else {
+  } else if (data.rol === 2) {
     result = await usuarioModel.findByMedic(data);
+  } else if (data.rol === 3) {
+    result = await usuarioModel.findByAdmin(data);
   }
 
   // Verificamos si no hay usuario
