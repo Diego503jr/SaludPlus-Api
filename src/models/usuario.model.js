@@ -83,19 +83,6 @@ exports.findByMedic = async (user) => {
 };
 
 exports.findByAdmin = async (user) => {
-  // Verificamos si es superAdmin
-  if (user?.superAdmin) {
-    if (user.superAdmin !== "saludplusadminisss503") {
-      const error = Error("No tiene permisos para acceder");
-      error.status = 403;
-      throw error;
-    }
-  } else {
-    const error = Error("No tiene permisos para acceder");
-    error.status = 403;
-    throw error;
-  }
-
   // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
   const client = await pool.connect();
 
@@ -210,6 +197,57 @@ exports.createPaciente = async (user) => {
     // Salio algo mal hacemos un rollback
     await client.query("ROLLBACK");
 
+    if (err?.message?.includes("llave duplicada")) err.status = 409;
+    throw err;
+  } finally {
+    // Liberamos la conexion
+    client.release();
+  }
+};
+
+// Funcion para crear un Paciente
+exports.createAnAdmin = async (user) => {
+  // Hacemos un destructuring del objeto que traemos de user
+  const { rol, email, password } = user;
+
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+
+  try {
+    // Iniciamos la transaccion
+    await client.query("BEGIN");
+
+    // Realizamos las inserciones en las tablas
+    let result = await client.query(
+      `WITH new_usuario AS (
+        INSERT INTO usuarios 
+        (nombre, apellido, dui, email, password_hash, genero, rol_id)
+        VALUES 
+        ('Super', 'Admin', 'Sin Dui', $1, $2, 'O', $3)
+        RETURNING *
+      )
+      
+      SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.password_hash AS password, U.telefono
+        , U.fecha_nacimiento AS fechaNacimiento, U.genero, U.rol_id AS rolId
+      FROM new_usuario U
+      INNER JOIN roles R ON R.id = U.rol_id
+      `,
+      [email, password, rol],
+    );
+
+    // Verificamos si se registro el usuario
+    if (!result.rows[0]) {
+      throw new Error(`No se registro el paciente exitosamente.`);
+    }
+
+    // Aceptamos cambios
+    await client.query("COMMIT");
+
+    // Retornamos el result por default de la db
+    return result.rows[0];
+  } catch (err) {
+    // Salio algo mal hacemos un rollback
+    await client.query("ROLLBACK");
     if (err?.message?.includes("llave duplicada")) err.status = 409;
     throw err;
   } finally {
