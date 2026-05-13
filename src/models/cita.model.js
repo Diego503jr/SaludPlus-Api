@@ -208,41 +208,45 @@ exports.GetAppointments = async (id) => {
 // ==========================================
 // GUARDAR CITA (POST)
 // ==========================================
-exports.crearCita = async (citaData) => {
-  const client = await pool.connect();
+exports.crearCita = async (datos) => {
+    const client = await pool.connect();
+    try {
+        // Buscamos el ID real del paciente usando el usuario_id
+        const resPaciente = await client.query(
+            "SELECT id FROM pacientes WHERE usuario_id = $1", 
+            [datos.usuario_id]
+        );
 
-  try {
-    const query = `
-      INSERT INTO citas (
-        paciente_id, 
-        especialidad_id, 
-        unidad_medica_id, 
-        fecha_solicitada, 
-        hora_asignada, 
-        motivo_consulta, 
-        estado_id
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, 
-        (SELECT id FROM estados_cita WHERE nombre = 'pendiente')
-      ) RETURNING *;
-    `;
-    
-    const values = [
-      citaData.paciente_id,
-      citaData.especialidad_id,
-      citaData.unidad_medica_id,
-      citaData.fecha_solicitada,
-      citaData.hora_asignada,
-      citaData.motivo_consulta
-    ];
+        if (resPaciente.rows.length === 0) {
+            throw new Error("No se encontró un paciente asociado a este usuario");
+        }
 
-    const response = await client.query(query, values);
-    return response.rows[0];
+        const pacienteIdReal = resPaciente.rows[0].id;
 
-  } catch (err) {
-    throw err;
-  } finally {
-    client.release();
-  }
+        const query = `
+            INSERT INTO citas (
+                paciente_id, especialidad_id, unidad_medica_id, 
+                fecha_solicitada, hora_asignada, motivo_consulta, estado_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, (SELECT id FROM estados_cita WHERE nombre = 'pendiente'))
+            RETURNING id;
+        `;
+
+        const values = [
+            pacienteIdReal,
+            datos.especialidad_id,
+            datos.unidad_medica_id,
+            datos.fecha_solicitada,
+            datos.hora_asignada,
+            datos.motivo_consulta
+        ];
+
+        const response = await client.query(query, values);
+        return response.rows[0];
+
+    } catch (err) {
+        throw err;
+    } finally {
+        client.release();
+    }
 };
 

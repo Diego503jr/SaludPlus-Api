@@ -18,10 +18,10 @@ exports.GetAppointments = async (userId) => {
 };
 
 // SERVICIO PARA PROCESAR LAS PRÓXIMAS CITAS
-exports.obtenerCitasProximas = async (idPaciente) => {
+exports.obtenerCitasProximas = async (idUsuario) => {
     try {
         // Llamamos al modelo
-        const citas = await citaModel.obtenerProximasPorPaciente(idPaciente);
+        const citas = await citaModel.obtenerProximasPorPaciente(idUsuario);
         
         if (citas.length === 0) {
             return [];

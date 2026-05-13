@@ -233,43 +233,34 @@ exports.delete = async (id) => {
 // EDITAR PERFIL: MODELO
 exports.actualizarPerfil = async (idUsuario, datos) => {
   const client = await pool.connect();
-
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
-    const pacQuery = "SELECT id FROM pacientes WHERE usuario_id = $1";
-    const pacRes = await client.query(pacQuery, [idUsuario]);
+    //Obtener el ID del paciente desde el usuario_id
+    const pacRes = await client.query(
+        'SELECT id FROM pacientes WHERE usuario_id = $1', 
+        [idUsuario]
+    );
 
-    if (pacRes.rows.length === 0) {
-      throw new Error("Paciente no encontrado");
-    }
-
+    if (pacRes.rows.length === 0) throw new Error('Paciente no encontrado');
     const idPaciente = pacRes.rows[0].id;
 
-    // Actualizamos la tabla 'usuarios' usando el idUsuario
-    const updateUsuario = `
-      UPDATE usuarios 
-      SET telefono = COALESCE($1, telefono)
-      WHERE id = $2;
-    `;
-    await client.query(updateUsuario, [datos.telefono, idUsuario]);
+    // Actualizar tabla usuarios (teléfono)
+    await client.query(
+        'UPDATE usuarios SET telefono = COALESCE($1, telefono) WHERE id = $2',
+        [datos.telefono, idUsuario]
+    );
 
-    const updatePaciente = `
-      UPDATE pacientes 
-      SET alergias = COALESCE($1, alergias),
-          condiciones_cronicas = COALESCE($2, condiciones_cronicas)
-      WHERE id = $3;
-    `;
-    await client.query(updatePaciente, [
-      datos.alergias,
-      datos.condiciones_cronicas,
-      idPaciente,
-    ]);
+    // Actualizar tabla pacientes (alergias y condiciones)
+    await client.query(
+        'UPDATE pacientes SET alergias = COALESCE($1, alergias), condiciones_cronicas = COALESCE($2, condiciones_cronicas) WHERE id = $3',
+        [datos.alergias, datos.condiciones_cronicas, idPaciente]
+    );
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
     return true;
   } catch (err) {
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();

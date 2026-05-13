@@ -29,20 +29,20 @@ exports.GetAppointments = async (req, res) => {
     }
 };
 
-// CONTROLADOR PARA ENVIAR LA RESPUESTA AL FRONTEND
+// CONTROLADOR PARA OBTENER PROXIMAS CITAS (FUTURAS PENDIENTES O CONFIRMADAS)
 exports.obtenerProximasCitas = async (req, res) => {
     try {
-        // Obtenemos el ID del paciente desde la URL
-        const idPaciente = req.params.pacienteId;
+        // Obtenemos el Id del Usuario
+        const idUsuario = req.params.usuarioId;
 
-        if (!idPaciente) {
+        if (!idUsuario) {
             return res.status(400).json({
                 exito: false,
-                mensaje: "El ID del paciente es requerido"
+                mensaje: "El ID del usuario es requerido"
             });
         }
 
-        const proximasCitas = await citaService.obtenerCitasProximas(idPaciente);
+        const proximasCitas = await citaService.obtenerCitasProximas(idUsuario);
 
         res.status(200).json({
             exito: true,
@@ -88,7 +88,7 @@ exports.getHorarios = async (req, res) => {
     }
 };
 
-// HISTORIAL DE CITAS: CONTROLADOR
+// HISTORIAL DE CITAS: CONTROLADOR (OBTIENE CITAS PASADAS Y PROXIMAS)
 exports.getHistorial = async (req, res) => {
     try {
         const idUsuario = req.params.usuarioId;
@@ -142,7 +142,7 @@ exports.getUnidadesMapa = async (req, res) => {
 exports.crearCita = async (req, res) => {
     try {
         const {
-            paciente_id,
+            usuario_id,
             especialidad_id,
             unidad_medica_id,
             fecha_solicitada,
@@ -151,7 +151,7 @@ exports.crearCita = async (req, res) => {
         } = req.body;
 
         // Validar que el frontend nos mande todos los campos requeridos
-        if (!paciente_id || !especialidad_id || !unidad_medica_id || !fecha_solicitada || !hora_asignada || !motivo_consulta) {
+        if (!usuario_id || !especialidad_id || !unidad_medica_id || !fecha_solicitada || !hora_asignada || !motivo_consulta) {
             return res.status(400).json({
                 exito: false,
                 mensaje: "Faltan datos obligatorios para agendar la cita"
