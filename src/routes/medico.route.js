@@ -19,11 +19,17 @@ router.get(
 );
 router.patch(
   "/paciente/historial/update/:id",
+  authMiddleware,
   historialPacienteController.updateHistorialPaciente,
 );
-router.get("/medicina/:medicineId?", medicamentoController.getMedicine);
+router.get(
+  "/medicina/:medicineId?",
+  authMiddleware,
+  medicamentoController.getMedicine,
+);
 router.get(
   "/historialPaciente/information/:patientId",
+  authMiddleware,
   paciente.GetPatientInfo,
 );
 router.post(
@@ -33,6 +39,7 @@ router.post(
 );
 router.post(
   "/receta/medicamento/create/",
+  authMiddleware,
   recetaMedicamentoController.createDetalleReceta,
 );
 
