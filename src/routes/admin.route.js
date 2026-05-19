@@ -3,6 +3,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 const medicoController = require("../controllers/medico.controller");
 const pacienteController = require("../controllers/paciente.controller");
 const unidadesMedicas = require("../controllers/unidadesMedicas.controller");
+const medicamentos = require("../controllers/medicamento.controller");
 
 // ROUTES MEDICOS
 router.post("/medicos/create", authMiddleware, medicoController.registerMedico);
@@ -51,6 +52,19 @@ router.delete(
   "/unidades_medicas/delete/:id",
   authMiddleware,
   unidadesMedicas.deleteUnidadMedica,
+);
+
+// ROUTES MEDICAMENTO
+router.get("/medicamentos/read", authMiddleware, medicamentos.getMedicamentos);
+router.put(
+  "/medicamentos/update/:id",
+  authMiddleware,
+  medicamentos.updateMedicamento,
+);
+router.delete(
+  "/medicamentos/delete/:id",
+  authMiddleware,
+  medicamentos.deleteMedicamento,
 );
 
 module.exports = router;
