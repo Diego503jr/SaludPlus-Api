@@ -5,7 +5,7 @@ exports.obtenerProximasPorPaciente = async (idPaciente) => {
   const client = await pool.connect();
 
   try {
-   const query = `
+    const query = `
       SELECT 
           c.id AS cita_id,
           e.nombre AS especialidad,
@@ -29,18 +29,16 @@ exports.obtenerProximasPorPaciente = async (idPaciente) => {
     const response = await client.query(query, [idPaciente]);
 
     if (response.rows.length === 0) {
-        return []; 
+      return [];
     }
 
     return response.rows;
-
   } catch (err) {
     throw err;
   } finally {
     client.release();
   }
 };
-
 
 // PASO 3 (SOLICITAR CITA): MODELOS PARA HORARIOS
 
@@ -76,9 +74,13 @@ exports.obtenerHorasOcupadas = async (unidadId, especialidadId, fecha) => {
         -- Solo tomamos en cuenta las citas que siguen en pie
         AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada');
     `;
-    const response = await client.query(query, [unidadId, especialidadId, fecha]);
+    const response = await client.query(query, [
+      unidadId,
+      especialidadId,
+      fecha,
+    ]);
     // Extraemos solo un arreglo con las horas ej. ['08:00:00', '09:30:00']
-    return response.rows.map(fila => fila.hora_asignada); 
+    return response.rows.map((fila) => fila.hora_asignada);
   } catch (err) {
     throw err;
   } finally {
@@ -116,7 +118,6 @@ exports.obtenerHistorialPaciente = async (idUsuario) => {
 
     const response = await client.query(query, [idUsuario]);
     return response.rows;
-
   } catch (err) {
     throw err;
   } finally {
@@ -131,7 +132,6 @@ exports.obtenerUnidadesParaMapa = async () => {
   const client = await pool.connect();
 
   try {
-
     const query = `
       SELECT 
           um.id, 
@@ -151,14 +151,12 @@ exports.obtenerUnidadesParaMapa = async () => {
 
     const response = await client.query(query);
     return response.rows;
-
   } catch (err) {
     throw err;
   } finally {
     client.release();
   }
 };
-
 
 //GET TODAS LAS CITAS DEL MÉDICO LOGEADO
 exports.GetAppointments = async (id) => {
@@ -187,17 +185,16 @@ exports.GetAppointments = async (id) => {
         AND EC.nombre NOT IN ('cancelada_sistema', 'atendida'); 
 `;
 
-  //Ejecutamos con id de médico autenticado
+    //Ejecutamos con id de médico autenticado
     const response = await client.query(query, [id]);
 
     // Validamos si tiene citas pendientes o activas
     if (response.rows.length === 0) {
-        throw new Error(`No hay citas disponibles: ${id}`);
+      throw new Error(`No hay citas disponibles: ${id}`);
     }
 
-    //Retornamos el listado completo de citas 
+    //Retornamos el listado completo de citas
     return response.rows;
-
   } catch (err) {
     throw err;
   } finally {
@@ -209,21 +206,21 @@ exports.GetAppointments = async (id) => {
 // GUARDAR CITA (POST)
 // ==========================================
 exports.crearCita = async (datos) => {
-    const client = await pool.connect();
-    try {
-        // Buscamos el ID real del paciente usando el usuario_id
-        const resPaciente = await client.query(
-            "SELECT id FROM pacientes WHERE usuario_id = $1", 
-            [datos.usuario_id]
-        );
+  const client = await pool.connect();
+  try {
+    // Buscamos el ID real del paciente usando el usuario_id
+    const resPaciente = await client.query(
+      "SELECT id FROM pacientes WHERE usuario_id = $1",
+      [datos.usuario_id],
+    );
 
-        if (resPaciente.rows.length === 0) {
-            throw new Error("No se encontró un paciente asociado a este usuario");
-        }
+    if (resPaciente.rows.length === 0) {
+      throw new Error("No se encontró un paciente asociado a este usuario");
+    }
 
-        const pacienteIdReal = resPaciente.rows[0].id;
+    const pacienteIdReal = resPaciente.rows[0].id;
 
-        const query = `
+    const query = `
             INSERT INTO citas (
                 paciente_id, especialidad_id, unidad_medica_id, 
                 fecha_solicitada, hora_asignada, motivo_consulta, estado_id
@@ -231,22 +228,72 @@ exports.crearCita = async (datos) => {
             RETURNING id;
         `;
 
-        const values = [
-            pacienteIdReal,
-            datos.especialidad_id,
-            datos.unidad_medica_id,
-            datos.fecha_solicitada,
-            datos.hora_asignada,
-            datos.motivo_consulta
-        ];
+    const values = [
+      pacienteIdReal,
+      datos.especialidad_id,
+      datos.unidad_medica_id,
+      datos.fecha_solicitada,
+      datos.hora_asignada,
+      datos.motivo_consulta,
+    ];
 
-        const response = await client.query(query, values);
-        return response.rows[0];
-
-    } catch (err) {
-        throw err;
-    } finally {
-        client.release();
-    }
+    const response = await client.query(query, values);
+    return response.rows[0];
+  } catch (err) {
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
+// REPORTE DE HISTORICO DE CITAS
+exports.historicoCitas = async (id) => {
+  // Abrimos la conexion a la db para hacer uso de las transacciones por si algo paso mal
+  const client = await pool.connect();
+
+  try {
+    // Iniciamos la transaccion
+    await client.query("BEGIN");
+
+    let result = await client.query(
+      `SELECT 
+            C.id,
+            C.paciente_id        AS pacienteId,
+            C.medico_id          AS medicoId,
+            C.unidad_medica_id   AS unidadMedicaId,
+            C.especialidad_id    AS especialidadId,
+            C.fecha_solicitada   AS fechaSolicitada,
+            C.hora_asignada      AS horaAsignada,
+            C.estado_id          AS estadoId,
+            C.motivo_consulta    AS motivoConsulta,
+            -- Flags
+            CASE WHEN AC.marcado_at   IS NOT NULL AND AC.asistio = TRUE THEN 1 ELSE 0 END AS asistida,
+            CASE WHEN HC.cancelado_at IS NOT NULL                       THEN 1 ELSE 0 END AS cancelada,
+            CASE WHEN C.cita_origen_id IS NOT NULL                      THEN 1 ELSE 0 END AS reprogramada,
+            CASE WHEN AC.id IS NULL AND HC.id IS NULL                   THEN 1 ELSE 0 END AS noAsistida
+        FROM citas C
+            LEFT JOIN asistencias_cita AC        ON AC.cita_id = C.id
+            LEFT JOIN historial_cancelaciones HC ON HC.cita_id = C.id
+        WHERE C.unidad_medica_id = $1
+        ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;`,
+      [id],
+    );
+
+    // Aceptamos cambios
+    await client.query("COMMIT");
+
+    // Verificamos si hay historico de citas
+    if (!result.rows[0]) {
+      throw new Error(`No se encontraron las citas.`);
+    }
+    // Retornamos el result por default de la db
+    return result.rows;
+  } catch (err) {
+    // Salio algo mal hacemos un rollback
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    // Liberamos la conexion
+    client.release();
+  }
+};

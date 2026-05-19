@@ -5,6 +5,7 @@ const pacienteController = require("../controllers/paciente.controller");
 const unidadesMedicas = require("../controllers/unidadesMedicas.controller");
 const medicamentos = require("../controllers/medicamento.controller");
 const unidadEspecialidad = require("../controllers/unidadEspecialidad.controller");
+const citas = require("../controllers/cita.controller");
 
 // ROUTES MEDICOS
 router.post("/medicos/create", authMiddleware, medicoController.registerMedico);
@@ -88,6 +89,13 @@ router.delete(
   "/unidad_especialidad/delete/:id",
   authMiddleware,
   unidadEspecialidad.deleteUnidadEspecialidad,
+);
+
+// REPORTE HISTORICO DE CITAS
+router.get(
+  "/estadisticas/historico_citas/",
+  authMiddleware,
+  citas.historicoCitas,
 );
 
 module.exports = router;
