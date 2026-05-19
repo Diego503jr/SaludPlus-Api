@@ -4,6 +4,7 @@ const medicoController = require("../controllers/medico.controller");
 const pacienteController = require("../controllers/paciente.controller");
 const unidadesMedicas = require("../controllers/unidadesMedicas.controller");
 const medicamentos = require("../controllers/medicamento.controller");
+const unidadEspecialidad = require("../controllers/unidadEspecialidad.controller");
 
 // ROUTES MEDICOS
 router.post("/medicos/create", authMiddleware, medicoController.registerMedico);
@@ -65,6 +66,28 @@ router.delete(
   "/medicamentos/delete/:id",
   authMiddleware,
   medicamentos.deleteMedicamento,
+);
+
+// ROUTES UNIDADES ESPECIALIDAD
+router.post(
+  "/unidad_especialidad/create",
+  authMiddleware,
+  unidadEspecialidad.registerUnidadEspecialidad,
+);
+router.get(
+  "/unidad_especialidad/read",
+  authMiddleware,
+  unidadEspecialidad.getUnidadesEspecialidad,
+);
+router.put(
+  "/unidad_especialidad/update/:id",
+  authMiddleware,
+  unidadEspecialidad.updateUnidadEspecialidad,
+);
+router.delete(
+  "/unidad_especialidad/delete/:id",
+  authMiddleware,
+  unidadEspecialidad.deleteUnidadEspecialidad,
 );
 
 module.exports = router;

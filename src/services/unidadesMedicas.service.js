@@ -1,4 +1,4 @@
-const unidadesMedicas = require("../models/unidadesMedicas");
+const unidadesMedicas = require("../models/unidadesMedicas.model");
 
 // Create Unidades Medicas
 exports.registerUnidadMedica = async (data) => {
