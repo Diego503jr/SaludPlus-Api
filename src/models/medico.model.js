@@ -132,6 +132,7 @@ exports.read = async () => {
 
     let result = await client.query(
       `SELECT U.id AS usuarioId, U.nombre, U.apellido, U.dui, U.email, U.telefono, U.fecha_nacimiento AS fechaNacimiento
+        , EXTRACT(YEAR FROM AGE(NOW(), U.fecha_nacimiento)) AS edad
         , U.genero, U.rol_id AS rolId, R.nombre AS rolNombre, U.activo, M.id, M.num_jvpm AS numJvpm
         , M.especialidad_id AS especialidadId, E.nombre AS especialidadNombre, M.unidad_medica_id AS unidadMedicaId
         , UM.nombre AS unidadMedicaNombre
