@@ -40,4 +40,11 @@ router.put(
   pacienteController.actualizarPerfilPaciente,
 );
 
+// RUTA: Cancelar o Reprogramar una cita
+router.patch(
+  '/actualizar-cita/:citaId', 
+  authMiddleware, 
+  citaController.actualizarCitaUnico
+);
+
 module.exports = router;

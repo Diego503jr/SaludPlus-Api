@@ -142,7 +142,9 @@ exports.obtenerHistorialCitas = async (idUsuario) => {
       const citaFormateada = {
         id: cita.cita_id,
         estado: cita.estado,
+        especialidad_id: cita.especialidad_id,
         especialidad: cita.especialidad,
+        unidad_medica_id: cita.unidad_medica_id,
         fecha_solicitada: cita.fecha_solicitada,
         hora_asignada: cita.hora_asignada || "Por asignar",
         unidad_medica: cita.unidad_medica,
@@ -214,4 +216,26 @@ exports.historicoCitas = async (data) => {
   }
 
   return result;
+};
+
+//MODIFICAR CITAS
+
+exports.modificarCita = async (idCita, datos) => {
+    try {
+        let camposEfectivos = { ...datos };
+
+        // Si se manda fecha y hora para cambiar, REPROGRAMACIÓN
+        if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
+            camposEfectivos.estado_id = 5; 
+        }
+
+        const resultado = await citaModel.actualizarEstadoCita(idCita, camposEfectivos);
+        if (!resultado) {
+            throw new Error('Cita no encontrada');
+        }
+        
+        return resultado;
+    } catch (error) {
+        throw error;
+    }
 };

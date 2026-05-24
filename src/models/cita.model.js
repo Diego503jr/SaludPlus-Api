@@ -96,6 +96,8 @@ exports.obtenerHistorialPaciente = async (idUsuario) => {
     const query = `
       SELECT 
           c.id AS cita_id,
+          c.especialidad_id,
+          c.unidad_medica_id,
           e.nombre AS especialidad,
           c.fecha_solicitada,
           c.hora_asignada,
@@ -294,6 +296,40 @@ exports.historicoCitas = async (id) => {
     throw err;
   } finally {
     // Liberamos la conexion
+    client.release();
+  }
+};
+
+// ==========================================
+// ACTUALIZAR ESTADO DE CITA
+// ==========================================
+// ==========================================
+// ACTUALIZAR CITA (PATCH ÚNICO): CANCELAR O REPROGRAMAR
+// ==========================================
+exports.actualizarEstadoCita = async (idCita, datos) => {
+  const client = await pool.connect();
+  try {
+    const query = `
+      UPDATE citas 
+      SET estado_id = COALESCE($1, estado_id),
+          fecha_solicitada = COALESCE($2, fecha_solicitada),
+          hora_asignada = COALESCE($3, hora_asignada)
+      WHERE id = $4
+      RETURNING id;
+    `;
+    
+    const values = [
+      datos.estado_id,         
+      datos.fecha_solicitada,  
+      datos.hora_asignada,     
+      idCita                   
+    ];
+
+    const response = await client.query(query, values);
+    return response.rows[0];
+  } catch (err) {
+    throw err;
+  } finally {
     client.release();
   }
 };
