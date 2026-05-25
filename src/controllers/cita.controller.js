@@ -206,3 +206,32 @@ exports.historicoCitas = async (req, res) => {
     });
   }
 };
+
+// ACTUALIZAR CITA (PATCH): CONTROLADOR ÚNICO
+exports.actualizarCitaUnico = async (req, res) => {
+    try {
+        const idCita = req.params.citaId; 
+        const datosBody = req.body;
+
+        // Validamos que venga al menos un dato en el JSON
+        if (Object.keys(datosBody).length === 0) {
+            return res.status(400).json({
+                exito: false,
+                mensaje: "Debe enviar parámetros para modificar la cita (estado_id, fecha o hora)"
+            });
+        }
+
+        await citaService.modificarCita(idCita, datosBody);
+
+        res.status(200).json({
+            exito: true,
+            mensaje: "¡La cita se ha actualizado correctamente!"
+        });
+    } catch (error) {
+        console.error("Error en actualizarCitaUnico:", error);
+        if (error.message === 'Cita no encontrada') {
+            return res.status(404).json({ exito: false, mensaje: error.message });
+        }
+        res.status(500).json({ exito: false, mensaje: "Error interno del servidor" });
+    }
+};
