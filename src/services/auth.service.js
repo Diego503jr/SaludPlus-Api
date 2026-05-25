@@ -28,42 +28,7 @@ exports.login = async (data) => {
   } else if (data.rol === 2) {
     result = await usuarioModel.findByMedic(data);
   } else if (data.rol === 3) {
-    // Verificamos si existe la llave superAdmin
-    if (!data?.superAdmin) {
-      const error = new Error("Recurso no encontrado.");
-      error.status = 404;
-      throw error;
-    }
-
-    // Verificamos datos requeridos
-    if (!data.email || !data.password) {
-      const error = new Error("No hay datos requeridos");
-      error.status = 400;
-      throw error;
-    }
-
-    switch (data.superAdmin) {
-      case "saludplusnewadmin":
-        // Hasheamos la pwd con la lib bcrypt
-        const hashedPassword = await securityLib.hash(data.password);
-
-        const finData = {
-          ...data,
-          password: hashedPassword,
-        };
-
-        // Creamos al admin por default
-        result = await usuarioModel.createAnAdmin(finData);
-        break;
-      case "saludplusadminisss":
-        // Seguimos con logica de inicio de sesion
-        result = await usuarioModel.findByAdmin(data);
-        break;
-      default:
-        const error = new Error("No tiene permisos para acceder");
-        error.status = 403;
-        throw error;
-    }
+    result = await usuarioModel.findByAdmin(data);
   }
 
   // Verificamos si no hay usuario
