@@ -42,5 +42,10 @@ router.post(
   authMiddleware,
   recetaMedicamentoController.createDetalleReceta,
 );
+router.get(
+  "/reports/citas/paciente/:id",
+  authMiddleware,
+  citaController.historicoCitasPorPaciente,
+);
 
 module.exports = router;

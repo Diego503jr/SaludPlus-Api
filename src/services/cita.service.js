@@ -218,24 +218,48 @@ exports.historicoCitas = async (data) => {
   return result;
 };
 
+// HISTORICO DE CITAS POR PACIENTE
+exports.historicoCitasPorPaciente = async (id) => {
+  if (!id) {
+    const error = new Error("El ID del paciente es requerido.");
+    error.status = 400;
+    throw error;
+  }
+
+  const result = await citaModel.historicoCitasPorPaciente(id);
+
+  if (!result || result.length === 0) {
+    const error = new Error(
+      "No se encontró histórico de citas para este paciente.",
+    );
+    error.status = 404;
+    throw error;
+  }
+
+  return result;
+};
+
 //MODIFICAR CITAS
 
 exports.modificarCita = async (idCita, datos) => {
-    try {
-        let camposEfectivos = { ...datos };
+  try {
+    let camposEfectivos = { ...datos };
 
-        // Si se manda fecha y hora para cambiar, REPROGRAMACIÓN
-        if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
-            camposEfectivos.estado_id = 5; 
-        }
-
-        const resultado = await citaModel.actualizarEstadoCita(idCita, camposEfectivos);
-        if (!resultado) {
-            throw new Error('Cita no encontrada');
-        }
-        
-        return resultado;
-    } catch (error) {
-        throw error;
+    // Si se manda fecha y hora para cambiar, REPROGRAMACIÓN
+    if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
+      camposEfectivos.estado_id = 5;
     }
+
+    const resultado = await citaModel.actualizarEstadoCita(
+      idCita,
+      camposEfectivos,
+    );
+    if (!resultado) {
+      throw new Error("Cita no encontrada");
+    }
+
+    return resultado;
+  } catch (error) {
+    throw error;
+  }
 };

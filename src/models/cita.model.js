@@ -300,6 +300,86 @@ exports.historicoCitas = async (id) => {
   }
 };
 
+// HISTORICO COMPLETO DE CITAS POR PACIENTE (TODOS LOS CAMPOS)
+exports.historicoCitasPorPaciente = async (idPaciente) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const query = `
+      SELECT 
+          -- Datos completos de la cita
+          C.id                          AS cita_id,
+          C.paciente_id,
+          C.medico_id,
+          C.unidad_medica_id,
+          C.especialidad_id,
+          C.fecha_solicitada,
+          C.hora_asignada,
+          C.estado_id,
+          C.motivo_consulta,
+          C.observaciones_medico,
+          C.cita_origen_id,
+
+          -- Datos del paciente
+          UP.nombre                     AS paciente_nombre,
+          UP.apellido                   AS paciente_apellido,
+          UP.dui                        AS paciente_dui,
+          P.num_afiliado                AS paciente_num_afiliado,
+
+          -- Datos del médico (puede ser NULL si no se ha asignado)
+          UM_DOC.nombre                 AS medico_nombre,
+          UM_DOC.apellido               AS medico_apellido,
+          M.num_jvpm                    AS medico_jvpm,
+
+          -- Especialidad
+          E.nombre                      AS especialidad_nombre,
+
+          -- Unidad médica
+          U.nombre                      AS unidad_medica_nombre,
+          U.direccion                   AS unidad_medica_direccion,
+          U.telefono                    AS unidad_medica_telefono,
+
+          -- Estado de la cita
+          EC.nombre                     AS estado_nombre,
+
+          -- Flags de seguimiento
+          CASE WHEN AC.marcado_at IS NOT NULL AND AC.asistio = TRUE THEN 1 ELSE 0 END AS asistida,
+          CASE WHEN HC.cancelado_at IS NOT NULL THEN 1 ELSE 0 END                     AS cancelada,
+          CASE WHEN C.cita_origen_id IS NOT NULL THEN 1 ELSE 0 END                    AS reprogramada,
+          CASE WHEN AC.id IS NULL AND HC.id IS NULL THEN 1 ELSE 0 END                 AS no_asistida,
+
+          -- Detalles de asistencia y cancelación (si existen)
+          AC.marcado_at                 AS asistencia_marcada_at,
+          HC.motivo                     AS cancelacion_motivo,
+          HC.cancelado_at               AS cancelacion_at
+      FROM citas C
+      INNER JOIN pacientes P              ON C.paciente_id = P.id
+      INNER JOIN usuarios UP              ON P.usuario_id = UP.id
+      INNER JOIN especialidades E         ON C.especialidad_id = E.id
+      INNER JOIN unidades_medicas U       ON C.unidad_medica_id = U.id
+      INNER JOIN estados_cita EC          ON C.estado_id = EC.id
+      LEFT  JOIN medicos M                ON C.medico_id = M.id
+      LEFT  JOIN usuarios UM_DOC          ON M.usuario_id = UM_DOC.id
+      LEFT  JOIN asistencias_cita AC      ON AC.cita_id = C.id
+      LEFT  JOIN historial_cancelaciones HC ON HC.cita_id = C.id
+      WHERE C.paciente_id = $1
+      ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;
+    `;
+
+    const result = await client.query(query, [idPaciente]);
+    await client.query("COMMIT");
+
+    return result.rows;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 // ==========================================
 // ACTUALIZAR ESTADO DE CITA
 // ==========================================
@@ -317,12 +397,12 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
       WHERE id = $4
       RETURNING id;
     `;
-    
+
     const values = [
-      datos.estado_id,         
-      datos.fecha_solicitada,  
-      datos.hora_asignada,     
-      idCita                   
+      datos.estado_id,
+      datos.fecha_solicitada,
+      datos.hora_asignada,
+      idCita,
     ];
 
     const response = await client.query(query, values);
