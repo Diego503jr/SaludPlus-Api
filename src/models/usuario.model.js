@@ -278,9 +278,9 @@ exports.deleteLogIn = async (data) => {
       [data.token],
     );
 
-    if (!existLogin.rowCount > 0) {
-      let error = Error(
-        "Ya se habia eliminad una sesion activa con el usuario ingresado.",
+    if (existLogin.rowCount === 0) {
+      let error = new Error(
+        "Ya se había eliminado una sesión activa con el usuario ingresado.",
       );
       error.status = 400;
       throw error;
@@ -315,4 +315,27 @@ exports.deleteLogIn = async (data) => {
   }
 
   return logOut;
+};
+
+// Verifica que un refresh token siga siendo válido en la DB
+exports.buscarRefreshToken = async (data) => {
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query(
+      `SELECT 1
+       FROM refresh_tokens
+       WHERE token_hash = $1
+         AND revocado = FALSE
+         AND expires_at > NOW()`,
+      [data.token],
+    );
+
+    // Retorna true si encontró una sesión válida, false si no
+    return result.rowCount > 0;
+  } catch (err) {
+    throw err;
+  } finally {
+    client.release();
+  }
 };

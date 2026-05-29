@@ -54,9 +54,11 @@ exports.read = async () => {
     let result = await client.query(
       `SELECT UE.id, UE.unidad_medica_id AS unidadMedicaId, UM.nombre AS unidadMedicaNombre
         , UE.especialidad_id AS especialidadId, E.nombre AS especialidadNombre
-        , UE.cupo_diario AS cupoDiario, UE.activo
+        , UE.cupo_diario AS cupoDiario, UE.activo, MU.nombre AS municipioNombre, DE.nombre AS departamentoNombre
        FROM unidad_especialidad UE
         INNER JOIN unidades_medicas UM ON UM.id = UE.unidad_medica_id
+        INNER JOIN municipios MU ON MU.id = MU.departamento_id
+        INNER JOIN departamentos DE ON DE.id = MU.departamento_id
         INNER JOIN especialidades E ON E.id = UE.especialidad_id
        ORDER BY UM.nombre ASC, E.nombre ASC`,
     );

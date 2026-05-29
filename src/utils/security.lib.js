@@ -53,9 +53,15 @@ class SecurityLib {
    */
   validateToken(token) {
     try {
-      return jwt.verify(token, this.secret);
+      const decoded = jwt.verify(token, this.secret);
+      return { valid: true, expired: false, decoded };
     } catch (error) {
-      return null; // Token expirado o inválido
+      return {
+        valid: false,
+        // true solo si fue por expiración, no por firma inválida
+        expired: error.name === "TokenExpiredError",
+        decoded: null,
+      };
     }
   }
 }
