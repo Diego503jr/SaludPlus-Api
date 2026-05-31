@@ -83,33 +83,48 @@ exports.obtenerHorariosDisponibles = async (
     let diaSemana = fechaObj.getDay();
     diaSemana = diaSemana === 0 ? 7 : diaSemana; // En BD guardamos Domingo como 7
 
-    // 2. Traer a qué hora abre y cierra
+    // 2. Traer a qué hora abre y cierra la unidad ese día
     const horario = await citaModel.obtenerHorarioApertura(unidadId, diaSemana);
 
-    // Si no hay horario, significa que la clínica está cerrada ese día
-    if (!horario) return [];
+    // Si no hay horario, la clínica está cerrada ese día
+    if (!horario) throw new Error("No hay horarios registrados.");
 
-    // 3. Traer las horas que ya están reservadas
-    const horasOcupadas = await citaModel.obtenerHorasOcupadas(
+    // 3. Cuántos médicos atienden esta unidad + especialidad (médicos activos)
+    const totalMedicos = await citaModel.contarMedicosDisponibles(
+      unidadId,
+      especialidadId,
+    );
+
+    // Si no hay ni un médico, no hay nada que ofrecer
+    if (totalMedicos === 0) throw new Error("No hay medicos disponibles.");
+
+    // 4. Cuántos médicos están ocupados POR cada hora
+    //    ej. { "08:00:00": 2, "09:30:00": 1 }
+    const ocupadasPorHora = await citaModel.obtenerOcupacionPorHora(
       unidadId,
       especialidadId,
       fecha,
     );
 
-    // 4. Calcular los espacios disponibles (Citas cada 30 minutos)
+    // 5. Recorrer los bloques de 30 min y dejar solo donde quede algún médico libre
     const disponibles = [];
     let horaActual = horario.hora_inicio;
     const horaFin = horario.hora_fin;
 
     while (horaActual < horaFin) {
-      // Si la hora actual NO está en el arreglo de ocupadas, está disponible
-      if (!horasOcupadas.includes(horaActual)) {
+      const ocupados = ocupadasPorHora[horaActual] || 0;
+
+      // Hay hueco mientras NO estén ocupados todos los médicos
+      if (ocupados < totalMedicos) {
         // Le quitamos los segundos para que Android lo reciba bonito (ej. "08:30")
         disponibles.push(horaActual.substring(0, 5));
       }
-      // Le sumamos 30 minutos para evaluar el siguiente bloque
+
+      // Siguiente bloque
       horaActual = sumarMinutos(horaActual, 30);
     }
+
+    if (!disponibles) throw new Error("No hay horarios disponibles.");
 
     return disponibles;
   } catch (error) {

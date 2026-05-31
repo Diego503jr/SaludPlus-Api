@@ -78,12 +78,13 @@ exports.getHorarios = async (req, res) => {
     res.status(200).json({
       exito: true,
       datos: horarios,
+      mensaje: "Horarios Obtenidos",
     });
   } catch (error) {
-    console.error("Error en getHorarios:", error);
     res.status(500).json({
       exito: false,
-      mensaje: "Error interno del servidor al calcular horarios",
+      datos: [],
+      mensaje: error.message,
     });
   }
 };

@@ -42,17 +42,17 @@ exports.obtenerProximasPorPaciente = async (idPaciente) => {
 
 // PASO 3 (SOLICITAR CITA): MODELOS PARA HORARIOS
 
-// 3.1 Obtener la hora a la que abre y cierra la unidad en un día específico
+// 1. A qué hora abre y cierra la unidad en un día específico
 exports.obtenerHorarioApertura = async (unidadId, diaSemana) => {
   const client = await pool.connect();
   try {
     const query = `
-      SELECT hora_inicio, hora_fin 
-      FROM horarios_unidad 
+      SELECT hora_inicio, hora_fin
+      FROM horarios_unidad
       WHERE unidad_medica_id = $1 AND dia_semana = $2;
     `;
     const response = await client.query(query, [unidadId, diaSemana]);
-    return response.rows[0]; // Retorna un solo registro
+    return response.rows[0]; // un solo registro (o undefined si está cerrado)
   } catch (err) {
     throw err;
   } finally {
@@ -60,27 +60,54 @@ exports.obtenerHorarioApertura = async (unidadId, diaSemana) => {
   }
 };
 
-// 3.2 Obtener las horas que YA están ocupadas por otros pacientes ese día
-exports.obtenerHorasOcupadas = async (unidadId, especialidadId, fecha) => {
+// 2. Cuántos médicos ACTIVOS atienden esta unidad + especialidad
+exports.contarMedicosDisponibles = async (unidadId, especialidadId) => {
   const client = await pool.connect();
   try {
     const query = `
-      SELECT c.hora_asignada 
+      SELECT COUNT(*)::int AS total
+      FROM medicos m
+      INNER JOIN usuarios u ON m.usuario_id = u.id
+      WHERE m.unidad_medica_id = $1
+        AND m.especialidad_id = $2
+        AND u.activo = TRUE;
+    `;
+    const response = await client.query(query, [unidadId, especialidadId]);
+    return response.rows[0].total;
+  } catch (err) {
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+// 3. Cuántos médicos están ocupados POR cada hora ese día
+exports.obtenerOcupacionPorHora = async (unidadId, especialidadId, fecha) => {
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT c.hora_asignada, COUNT(DISTINCT c.medico_id) AS ocupados
       FROM citas c
       INNER JOIN estados_cita ec ON c.estado_id = ec.id
-      WHERE c.unidad_medica_id = $1 
-        AND c.especialidad_id = $2 
+      WHERE c.unidad_medica_id = $1
+        AND c.especialidad_id = $2
         AND c.fecha_solicitada = $3
-        -- Solo tomamos en cuenta las citas que siguen en pie
-        AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada');
+        AND c.medico_id IS NOT NULL
+        AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada')
+      GROUP BY c.hora_asignada;
     `;
     const response = await client.query(query, [
       unidadId,
       especialidadId,
       fecha,
     ]);
-    // Extraemos solo un arreglo con las horas ej. ['08:00:00', '09:30:00']
-    return response.rows.map((fila) => fila.hora_asignada);
+
+    // Convertimos las filas a un mapa hora -> nº de ocupados
+    const mapa = {};
+    response.rows.forEach((fila) => {
+      mapa[fila.hora_asignada] = parseInt(fila.ocupados, 10);
+    });
+    return mapa;
   } catch (err) {
     throw err;
   } finally {
@@ -210,38 +237,83 @@ exports.GetAppointments = async (id) => {
 exports.crearCita = async (datos) => {
   const client = await pool.connect();
   try {
-    // Buscamos el ID real del paciente usando el usuario_id
+    await client.query("BEGIN");
+
+    // 1. Paciente real a partir del usuario_id
     const resPaciente = await client.query(
       "SELECT id FROM pacientes WHERE usuario_id = $1",
       [datos.usuario_id],
     );
-
     if (resPaciente.rows.length === 0) {
       throw new Error("No se encontró un paciente asociado a este usuario");
     }
-
     const pacienteIdReal = resPaciente.rows[0].id;
 
-    const query = `
-            INSERT INTO citas (
-                paciente_id, especialidad_id, unidad_medica_id, 
-                fecha_solicitada, hora_asignada, motivo_consulta, estado_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, (SELECT id FROM estados_cita WHERE nombre = 'pendiente'))
-            RETURNING id;
-        `;
+    // 2. Buscar y BLOQUEAR al primer médico libre para esa hora exacta
+    const resMedico = await client.query(
+      `
+      SELECT m.id
+      FROM medicos m
+      INNER JOIN usuarios u ON m.usuario_id = u.id
+      WHERE m.unidad_medica_id = $1
+        AND m.especialidad_id = $2
+        AND u.activo = TRUE
+        AND NOT EXISTS (
+          SELECT 1
+          FROM citas c
+          INNER JOIN estados_cita ec ON c.estado_id = ec.id
+          WHERE c.medico_id = m.id
+            AND c.fecha_solicitada = $3
+            AND c.hora_asignada = $4
+            AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada')
+        )
+      ORDER BY m.id
+      FOR UPDATE OF m SKIP LOCKED
+      LIMIT 1;
+      `,
+      [
+        datos.unidad_medica_id,
+        datos.especialidad_id,
+        datos.fecha_solicitada,
+        datos.hora_asignada,
+      ],
+    );
 
-    const values = [
-      pacienteIdReal,
-      datos.especialidad_id,
-      datos.unidad_medica_id,
-      datos.fecha_solicitada,
-      datos.hora_asignada,
-      datos.motivo_consulta,
-    ];
+    // 3. Si no hay ninguno libre => error (tu caso de "no hay horas disponibles")
+    if (resMedico.rows.length === 0) {
+      const error = new Error("No hay médicos disponibles para esa hora.");
+      error.statusCode = 409; // Conflict
+      throw error;
+    }
+    const medicoIdLibre = resMedico.rows[0].id;
 
-    const response = await client.query(query, values);
-    return response.rows[0];
+    // 4. Insertar la cita YA con el médico asignado
+    const insert = await client.query(
+      `
+      INSERT INTO citas (
+        paciente_id, medico_id, especialidad_id, unidad_medica_id,
+        fecha_solicitada, hora_asignada, motivo_consulta, estado_id
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7,
+        (SELECT id FROM estados_cita WHERE nombre = 'confirmada')
+      )
+      RETURNING id;
+      `,
+      [
+        pacienteIdReal,
+        medicoIdLibre,
+        datos.especialidad_id,
+        datos.unidad_medica_id,
+        datos.fecha_solicitada,
+        datos.hora_asignada,
+        datos.motivo_consulta,
+      ],
+    );
+
+    await client.query("COMMIT");
+    return insert.rows[0];
   } catch (err) {
+    await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();
