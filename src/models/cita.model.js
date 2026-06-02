@@ -349,7 +349,7 @@ exports.historicoCitas = async (id) => {
       FROM citas C
           LEFT JOIN asistencias_cita AC        ON AC.cita_id = C.id
           LEFT JOIN historial_cancelaciones HC ON HC.cita_id = C.id
-      WHERE ($1::UUID IS NULL OR C.unidad_medica_id = $1::UUID)
+      WHERE ($1::INTEGER IS NULL OR C.unidad_medica_id = $1::INTEGER)
       ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;`,
       [id],
     );
