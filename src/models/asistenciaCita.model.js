@@ -14,7 +14,7 @@ exports.updateAsistido = async (id, asistidoCita) => {
       UPDATE citas SET estado_id = 6 WHERE id = $2::UUID
 
       UPDATE asistencias_cita AS AC
-      SET asistio = $1
+      SET asistio = True
       FROM citas AS C
       WHERE AC.cita_id = C.id
         AND AC.cita_id = $2::UUID
