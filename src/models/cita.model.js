@@ -330,8 +330,7 @@ exports.historicoCitas = async (id) => {
     // Iniciamos la transaccion
     await client.query("BEGIN");
 
-    let result = await client.query(
-      `SELECT 
+    let query = `SELECT 
           C.id,
           C.paciente_id        AS "pacienteId",
           C.medico_id          AS "medicoId",
@@ -348,11 +347,19 @@ exports.historicoCitas = async (id) => {
           CASE WHEN AC.id IS NULL AND HC.id IS NULL                   THEN 1 ELSE 0 END AS "noAsistida"
       FROM citas C
           LEFT JOIN asistencias_cita AC        ON AC.cita_id = C.id
-          LEFT JOIN historial_cancelaciones HC ON HC.cita_id = C.id
-      WHERE ($1::INTEGER IS NULL OR C.unidad_medica_id = $1::INTEGER)
-      ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;`,
-      [id],
-    );
+          LEFT JOIN historial_cancelaciones HC ON HC.cita_id = C.id`;
+
+    const params = [];
+
+    // Verificamos si es por una unidad
+    if (id !== null) {
+      query += " WHERE C.unidad_medica_id = $1 ";
+      params.push(id);
+    }
+
+    query += "ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;";
+
+    let result = await client.query(query, params);
 
     // Aceptamos cambios
     await client.query("COMMIT");
