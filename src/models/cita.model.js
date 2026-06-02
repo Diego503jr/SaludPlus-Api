@@ -332,25 +332,25 @@ exports.historicoCitas = async (id) => {
 
     let result = await client.query(
       `SELECT 
-            C.id,
-            C.paciente_id        AS pacienteId,
-            C.medico_id          AS medicoId,
-            C.unidad_medica_id   AS unidadMedicaId,
-            C.especialidad_id    AS especialidadId,
-            C.fecha_solicitada   AS fechaSolicitada,
-            C.hora_asignada      AS horaAsignada,
-            C.estado_id          AS estadoId,
-            C.motivo_consulta    AS motivoConsulta,
-            -- Flags
-            CASE WHEN AC.marcado_at   IS NOT NULL AND AC.asistio = TRUE THEN 1 ELSE 0 END AS asistida,
-            CASE WHEN HC.cancelado_at IS NOT NULL                       THEN 1 ELSE 0 END AS cancelada,
-            CASE WHEN C.cita_origen_id IS NOT NULL                      THEN 1 ELSE 0 END AS reprogramada,
-            CASE WHEN AC.id IS NULL AND HC.id IS NULL                   THEN 1 ELSE 0 END AS noAsistida
-        FROM citas C
-            LEFT JOIN asistencias_cita AC        ON AC.cita_id = C.id
-            LEFT JOIN historial_cancelaciones HC ON HC.cita_id = C.id
-        WHERE C.unidad_medica_id = $1
-        ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;`,
+          C.id,
+          C.paciente_id        AS "pacienteId",
+          C.medico_id          AS "medicoId",
+          C.unidad_medica_id   AS "unidadMedicaId",
+          C.especialidad_id    AS "especialidadId",
+          C.fecha_solicitada   AS "fechaSolicitada",
+          C.hora_asignada      AS "horaAsignada",
+          C.estado_id          AS "estadoId",
+          C.motivo_consulta    AS "motivoConsulta",
+          -- Flags
+          CASE WHEN AC.marcado_at   IS NOT NULL AND AC.asistio = TRUE THEN 1 ELSE 0 END AS asistida,
+          CASE WHEN HC.cancelado_at IS NOT NULL                       THEN 1 ELSE 0 END AS cancelada,
+          CASE WHEN C.cita_origen_id IS NOT NULL                      THEN 1 ELSE 0 END AS reprogramada,
+          CASE WHEN AC.id IS NULL AND HC.id IS NULL                   THEN 1 ELSE 0 END AS "noAsistida"
+      FROM citas C
+          LEFT JOIN asistencias_cita AC        ON AC.cita_id = C.id
+          LEFT JOIN historial_cancelaciones HC ON HC.cita_id = C.id
+      WHERE ($1::UUID IS NULL OR C.unidad_medica_id = $1::UUID)
+      ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;`,
       [id],
     );
 
