@@ -4,10 +4,16 @@ const usuarioModel = require("../models/usuario.model");
 module.exports = async (req, res, next) => {
   const token = req.headers["authorization"];
 
-  if (!token)
+  if (!authHeader) {
     return res
       .status(401)
       .json({ success: false, data: {}, message: "No hay token" });
+  }
+
+  // Quitamos el prefijo "Bearer " si viene incluido
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : authHeader;
 
   try {
     const result = securityLib.validateToken(token);
@@ -35,6 +41,12 @@ module.exports = async (req, res, next) => {
         message: "La sesión ha expirado. Inicia sesión nuevamente.",
       });
     }
+
+    return res.status(401).json({
+      success: false,
+      data: {},
+      message: "Token inválido.",
+    });
   } catch (err) {
     res.status(401).json({ success: false, data: {}, message: err.message });
   }
