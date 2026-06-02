@@ -2,7 +2,7 @@ const securityLib = require("../utils/security.lib");
 const usuarioModel = require("../models/usuario.model");
 
 module.exports = async (req, res, next) => {
-  const token = req.headers["authorization"];
+  const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
     return res
