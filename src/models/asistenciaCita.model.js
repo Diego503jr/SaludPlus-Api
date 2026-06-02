@@ -1,7 +1,7 @@
 const pool = require("../config/db");
 
 //Actualizar estado de cita (bool)
-exports.updateAsistido = async (id, asistidoCita) => {
+exports.updateAsistido = async (id, asistidoCita, medicoId) => {
   const { asistio } = asistidoCita;
   const client = await pool.connect();
 
