@@ -218,10 +218,7 @@ exports.agendarCita = async (citaData) => {
 };
 
 // REPORTE HISTORICO CITAS
-exports.historicoCitas = async (data) => {
-  // Hacemos destructuring del id
-  const { id } = data;
-
+exports.historicoCitas = async (id) => {
   let result = await citaModel.historicoCitas(id);
 
   if (!result) {
