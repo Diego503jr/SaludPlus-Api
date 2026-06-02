@@ -93,7 +93,7 @@ router.delete(
 
 // REPORTE HISTORICO DE CITAS
 router.get(
-  "/estadisticas/historico_citas/",
+  "/estadisticas/historico_citas",
   authMiddleware,
   citas.historicoCitas,
 );

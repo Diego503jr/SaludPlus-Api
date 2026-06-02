@@ -191,7 +191,7 @@ exports.crearCita = async (req, res) => {
 // REPORTE HISTORICO DE CITAS
 exports.historicoCitas = async (req, res) => {
   try {
-    const unidad_medica_id = req.query.id ? parseInt(req.query.id, 15) : null;
+    const unidad_medica_id = req.query.id ? parseInt(req.query.id, 10) : null;
     const data = await citaService.historicoCitas(unidad_medica_id);
 
     return res.status(200).json({
