@@ -11,6 +11,8 @@ exports.updateAsistido = async (id, asistidoCita) => {
 
     //Consulta Update en tabla asistecia cita
     const query = `
+      UPDATE citas SET estado_id = 6 WHERE id = $2::UUID
+
       UPDATE asistencias_cita AS AC
       SET asistio = $1
       FROM citas AS C
