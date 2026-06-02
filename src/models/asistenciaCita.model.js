@@ -9,21 +9,23 @@ exports.updateAsistido = async (id, asistidoCita) => {
     //Inicio de transacción
     await client.query("BEGIN");
 
+    //Actualizamos el estado de la cita
+    await client.query(`UPDATE citas SET estado_id = 6 WHERE id = $1::UUID`, [
+      id,
+    ]);
+
     //Consulta Update en tabla asistecia cita
     const query = `
-      UPDATE citas SET estado_id = 6 WHERE id = $2::UUID
-
-      UPDATE asistencias_cita AS AC
+      UPDATE asistencias_cita
       SET asistio = $1
-      FROM citas AS C
-      WHERE AC.cita_id = C.id
-        AND AC.cita_id = $2::UUID
-      RETURNING AC.id AS asistenciaCitaId, AC.cita_id AS citaId, AC.medico_id AS medicoId, AC.marcado_at AS marcadoAt, AC.asistio;`;
+      WHERE cita_id = $2::UUID
+      RETURNING id         AS asistenciaCitaId,
+                cita_id    AS citaId,
+                medico_id  AS medicoId,
+                marcado_at AS marcadoAt,
+                asistio;`;
 
-    const values = [asistio, id];
-
-    //Ejecución de actualización con estado y el Id
-    const response = await client.query(query, values);
+    const response = await client.query(query, [asistio, id]);
 
     //No existe el id o no coincide con filtros
     if (response.rowCount === 0) {
