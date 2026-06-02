@@ -203,7 +203,8 @@ exports.GetAppointments = async (id) => {
           EC.nombre AS estadoCita, 
           C.especialidad_id AS especialidadId,
           E.nombre AS especialidadCita,
-          C.hora_asignada AS horaAsignada
+          C.hora_asignada AS horaAsignada,
+          C.fecha_asignada AS fechaCita
       FROM Citas C
       INNER JOIN pacientes P ON C.paciente_id = P.id
       INNER JOIN usuarios U ON P.usuario_id = U.id
