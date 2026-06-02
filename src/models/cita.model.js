@@ -353,11 +353,11 @@ exports.historicoCitas = async (id) => {
 
     // Verificamos si es por una unidad
     if (id !== null) {
-      query += " WHERE C.unidad_medica_id = $1 ";
+      query += " WHERE C.unidad_medica_id = $1";
       params.push(id);
     }
 
-    query += "ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;";
+    query += " ORDER BY C.fecha_solicitada DESC, C.hora_asignada DESC;";
 
     let result = await client.query(query, params);
 
@@ -366,7 +366,7 @@ exports.historicoCitas = async (id) => {
 
     // Verificamos si hay historico de citas
     if (!result.rows[0]) {
-      throw new Error(`No se encontraron las citas.`);
+      return [];
     }
     // Retornamos el result por default de la db
     return result.rows;
