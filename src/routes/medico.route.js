@@ -11,7 +11,7 @@ const recetaController = require("../controllers/receta.controller");
 const recetaMedicamentoController = require("../controllers/recetaMedicamento.controller");
 
 router.get("/profile", authMiddleware, medicoController.findMedicoLogged);
-router.patch("/asistencia/update/:id", asistenciaController.marcarAsistencia);
+router.post("/asistencia/update/:id", authMiddleware, asistenciaController.marcarAsistencia);
 router.get(
   "/citas/allAppointments",
   authMiddleware,

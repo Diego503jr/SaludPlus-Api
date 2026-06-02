@@ -16,21 +16,20 @@ exports.updateAsistido = async (id, asistidoCita) => {
 
     //Consulta Update en tabla asistecia cita
     const query = `
-      UPDATE asistencias_cita
-      SET asistio = $1
-      WHERE cita_id = $2::UUID
+      INSERT INTO asistencias_cita (cita_id, medico_id, asistio, marcado_at)
+      VALUES ($1::UUID, $2::UUID, $3, NOW())
       RETURNING id         AS asistenciaCitaId,
                 cita_id    AS citaId,
                 medico_id  AS medicoId,
                 marcado_at AS marcadoAt,
                 asistio;`;
 
-    const response = await client.query(query, [asistio, id]);
+    const response = await client.query(query, [id, medicoId, asistio]);
 
     //No existe el id o no coincide con filtros
     if (response.rowCount === 0) {
       throw new Error(
-        `No se pudo actualizar la asistencia para la cita ${id}.`,
+        `No se pudo registrar la asistencia para la cita ${id}.`,
       );
     }
 

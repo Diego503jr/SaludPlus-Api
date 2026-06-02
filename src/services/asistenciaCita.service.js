@@ -1,26 +1,31 @@
 const asistenciaModel = require("../models/asistenciaCita.model");
 
-//FUNCIÓN PARA ACTUALIZAR ESTADO DE CITA
-exports.UpdateAsistencia = async (id, asistidoCita) => {
+// FUNCIÓN PARA REGISTRAR LA ASISTENCIA A UNA CITA
+exports.updateAsistido = async (id, asistidoCita, medicoId) => {
 
-    //Validamos que se reciba el id de cita
+    // Validamos que se reciba el id de cita
     if (!id) {
         throw new Error("El ID de la cita es obligatorio.");
     }
 
-    //Validamos tipo de dato
-    if (typeof asistidoCita.asistio !== 'boolean') {
-        throw new Error("El campo 'asistio' debe ser verdadero o falso.");
+    // Validamos que se reciba el id del médico logueado
+    if (!medicoId) {
+        throw new Error("El ID del médico es obligatorio para registrar la asistencia.");
     }
 
-    //Consulta al modelo, enviando id y estado
-    const asistenciaActualizada = await asistenciaModel.updateAsistido(id, asistidoCita);
+    // Validamos tipo de dato del cuerpo
+    if (typeof asistidoCita.asistio !== 'boolean') {
+        throw new Error("El campo 'asistio' debe ser un valor booleano (true o false).");
+    }
 
-    //Error
-    if (!asistenciaActualizada) {
-        throw new Error("No se pudo obtener el registro actualizado.");
+    // Consulta al modelo, enviando id de cita, la data y el id del médico
+    const nuevaAsistencia = await asistenciaModel.updateAsistido(id, asistidoCita, medicoId);
+
+    // Error en caso de que el modelo no devuelva la fila insertada
+    if (!nuevaAsistencia) {
+        throw new Error(`No se pudo registrar la asistencia para la cita ${id}.`);
     }
     
-    //Devolvemos información (asistencia exitosa)
-    return asistenciaActualizada;
+    // Devolvemos la información del nuevo registro insertado
+    return nuevaAsistencia;
 };
