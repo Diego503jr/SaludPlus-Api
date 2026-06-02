@@ -92,6 +92,10 @@ router.delete(
 );
 
 // REPORTE HISTORICO DE CITAS
-router.get("/estadisticas/historico_citas", citas.historicoCitas);
+router.get(
+  "/estadisticas/historico_citas",
+  authMiddleware,
+  citas.historicoCitas,
+);
 
 module.exports = router;
