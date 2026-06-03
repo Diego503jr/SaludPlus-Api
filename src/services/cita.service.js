@@ -264,20 +264,19 @@ exports.modificarCita = async (idCita, datos) => {
   try {
     let camposEfectivos = { ...datos };
 
-    //Si se recibe el body vacío ({}), asumimos que es una CANCELACIÓN
+    // Si mandan body vacío o sin estados de tiempo, es cancelación
     if (Object.keys(datos).length === 0 || (datos.estado_id === undefined && !datos.fecha_solicitada)) {
-      camposEfectivos.estado_id = 3; // 
+      camposEfectivos.estado_id = 3; 
     } 
-    //Si se manda fecha y hora para cambiar pero no un estado_id, es una REPROGRAMACIÓN
+    // Si viene fecha y hora, le inyectamos el estado 5 para que el modelo haga el INSERT de reprogramación
     else if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
-      camposEfectivos.estado_id = 5; // 
+      camposEfectivos.estado_id = 5; 
     }
 
-    // Llamamos al modelo pasándole únicamente la cita y el objeto de datos procesado
     const resultado = await citaModel.actualizarEstadoCita(idCita, camposEfectivos);
     
     if (!resultado) {
-      throw new Error("Cita no encontrada");
+      throw new Error("No se pudo procesar la solicitud de la cita");
     }
 
     return resultado;

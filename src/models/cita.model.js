@@ -461,68 +461,89 @@ exports.historicoCitasPorPaciente = async (idPaciente) => {
 };
 
 // ==========================================
-// ACTUALIZAR CITA: CANCELAR O REPROGRAMAR
+// ACTUALIZAR O REPROGRAMAR CITA 
 // ==========================================
 exports.actualizarEstadoCita = async (idCita, datos) => { 
   const client = await pool.connect();
   try {
-    // Iniciamos la Transacción
     await client.query('BEGIN');
     
-    //Modificamos la cita y le pedimos que nos devuelva el paciente_id
-    const query = `
-      UPDATE citas 
-      SET estado_id = COALESCE($1, estado_id),
-          fecha_solicitada = COALESCE($2, fecha_solicitada),
-          hora_asignada = COALESCE($3, hora_asignada)
-      WHERE id = $4
-      RETURNING id, paciente_id; 
+    // 1. Obtener los datos actuales de la cita antes de cambiar nada
+    const queryBuscar = `
+      SELECT id, paciente_id, medico_id, unidad_medica_id, especialidad_id, motivo_consulta
+      FROM citas 
+      WHERE id = $1;
     `;
+    const resBuscar = await client.query(queryBuscar, [idCita]);
 
-    const values = [
-      datos.estado_id,
-      datos.fecha_solicitada,
-      datos.hora_asignada,
-      idCita,
-    ];
-
-    const resUpdate = await client.query(query, values);
-    
-    // Si la cita no existe, mostramos error
-    if (resUpdate.rows.length === 0) {
+    if (resBuscar.rows.length === 0) {
       throw new Error('ERROR: Cita no encontrada');
     }
 
-    // Extraemos el paciente_id obtenido del registro modificado
-    const { paciente_id } = resUpdate.rows[0];
+    const citaOriginal = resBuscar.rows[0];
 
-    // En caso de ser Cancelación (ID 3)
-    if (Number(datos.estado_id) === 3) {
-      
-      // Verificación de seguridad por si el registro no tuviera paciente asignado
-      if (!paciente_id) {
-        throw new Error('ERROR: La cita no cuenta con un paciente asignado');
-      }
+    // Variables para controlar el retorno
+    let resultadoFinal = null;
 
-      // Query para registrar en el historial
-      const queryHistorial = `
+    // =========================================================================
+    // CASO 1: FLUJO DE REPROGRAMACIÓN 
+    // =========================================================================
+    if (Number(datos.estado_id) === 5) {
+      // Actualizamos la cita vieja a estado 'reprogramada' 
+      const queryVieja = `UPDATE citas SET estado_id = 5 WHERE id = $1;`;
+      await client.query(queryVieja, [idCita]);
+
+      // Insertamos la NUEVA cita replicando la información base 
+      const queryNuevaCita = `
+        INSERT INTO citas (
+          paciente_id, unidad_medica_id, especialidad_id, 
+          fecha_solicitada, hora_asignada, estado_id, 
+          motivo_consulta, cita_origen_id
+        ) VALUES ($1, $2, $3, $4, $5, 2, $6, $7) -- 1 = 'confirmada' para la nueva
+        RETURNING id, fecha_solicitada, hora_asignada, estado_id;
+      `;
+
+      const valuesNuevaCita = [
+        citaOriginal.paciente_id,
+        citaOriginal.unidad_medica_id,
+        citaOriginal.especialidad_id,
+        datos.fecha_solicitada, 
+        datos.hora_asignada,     
+        citaOriginal.motivo_consulta,
+        idCita                  
+      ];
+
+      const resNueva = await client.query(queryNuevaCita, valuesNuevaCita);
+      resultadoFinal = resNueva.rows[0];
+
+    // =========================================================================
+    // CASO 2: FLUJO DE CANCELACIÓN 
+    // =========================================================================
+    } else {
+      const queryUpdate = `
+        UPDATE citas 
+        SET estado_id = COALESCE($1, estado_id)
+        WHERE id = $2
+        RETURNING id, estado_id;
+      `;
+      const resUpdate = await client.query(queryUpdate, [datos.estado_id, idCita]);
+      resultadoFinal = resUpdate.rows[0];
+
+      // Si es cancelación (ID 3)
+      if (Number(datos.estado_id) === 3) {
+        const queryHistorial = `
           INSERT INTO historial_cancelacion_citas (cita_id, paciente_id, motivo)
           VALUES ($1, $2, $3);
         `;
-
-      const motivoCancelacion = datos.motivo || 'Cancelada por el paciente';
-
-      await client.query(queryHistorial, [idCita, paciente_id, motivoCancelacion]);
+        const motivoCancelacion = datos.motivo || 'Cancelada por el paciente';
+        await client.query(queryHistorial, [idCita, citaOriginal.paciente_id, motivoCancelacion]);
+      }
     }
 
-    // Confirmamos y guardamos los cambio
     await client.query('COMMIT');
-
-    // Devolvemos el registro actualizado con éxito
-    return resUpdate.rows[0];
+    return resultadoFinal;
 
   } catch (err) {
-    // Si algo falla, deshacemos todos los cambios
     await client.query('ROLLBACK');
     console.error("Transacción abortada en actualizarEstadoCita", err);
     throw err;
