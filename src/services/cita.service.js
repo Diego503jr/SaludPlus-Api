@@ -266,11 +266,11 @@ exports.modificarCita = async (idCita, datos) => {
 
     //Si se recibe el body vacío ({}), asumimos que es una CANCELACIÓN
     if (Object.keys(datos).length === 0 || (datos.estado_id === undefined && !datos.fecha_solicitada)) {
-      camposEfectivos.estado_id = 3; // 3 = cancelada_paciente según tu tabla estados_cita
+      camposEfectivos.estado_id = 3; // 
     } 
     //Si se manda fecha y hora para cambiar pero no un estado_id, es una REPROGRAMACIÓN
     else if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
-      camposEfectivos.estado_id = 5; // 5 = reprogramada según tu tabla estados_cita
+      camposEfectivos.estado_id = 5; // 
     }
 
     // Llamamos al modelo pasándole únicamente la cita y el objeto de datos procesado
