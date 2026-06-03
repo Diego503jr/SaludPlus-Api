@@ -461,14 +461,14 @@ exports.historicoCitasPorPaciente = async (idPaciente) => {
 };
 
 // ==========================================
-// ACTUALIZAR ESTADO DE CITA
+// ACTUALIZAR CITA: CANCELAR O REPROGRAMAR
 // ==========================================
-// ==========================================
-// ACTUALIZAR CITA (PATCH ÚNICO): CANCELAR O REPROGRAMAR
-// ==========================================
-exports.actualizarEstadoCita = async (idCita, datos) => {
+exports.actualizarEstadoCita = async (idCita, datos, usuarioId) => { 
   const client = await pool.connect();
   try {
+    // Iniciamos la Transaccion
+    await client.query('BEGIN');
+    
     const query = `
       UPDATE citas 
       SET estado_id = COALESCE($1, estado_id),
@@ -485,8 +485,86 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
       idCita,
     ];
 
-    const response = await client.query(query, values);
-    return response.rows[0];
+    const resUpdate = await client.query(query, values);
+    
+    // Si la cita no existe, mostramos error
+    if (resUpdate.rows.length === 0) {
+      throw new Error('ERROR: Cita no encontrada');
+    }
+
+    // En caso de ser Cancelación (ID 3)
+    if (Number(datos.estado_id) === 3) {
+      const getIdPaciente = `
+      SELECT id FROM pacientes
+      WHERE usuario_id = $1;
+      `;
+      const idPaciente = await client.query(getIdPaciente, [usuarioId]);
+
+      if(idPaciente.rows.length === 0) {
+        throw new Error('ERROR: Paciente no Encontrado')
+      }
+
+      const queryHistorial = `
+          INSERT INTO historial_cancelacion_citas (cita_id, paciente_id, motivo)
+          VALUES ($1, $2, $3);
+        `;
+
+      const motivoCancelacion = datos.motivo || 'Cancelada por el paciente';
+
+      // Ejecutamos el INSERT usando el mismo cliente de la transacción
+      await client.query(queryHistorial, [idCita, idPaciente.rows[0].id, motivoCancelacion]);
+    }
+
+    // Confirmamos y guardamos los cambios
+    await client.query('COMMIT');
+
+    // Devolvemos el registro actualizado con exito
+    return resUpdate.rows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("Transacción abortada", err);
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+// =============================================================================
+// VERIFICAR SI SE ALCANZÓ EL CUPO DIARIO DE UNA ESPECIALIDAD EN LA UNIDAD
+// =============================================================================
+exports.verificarCupoDiarioAlcanzado = async (unidadMedicaId, especialidadId, fecha) => {
+  const client = await pool.connect();
+  try {
+    //Contar cuántas citas activas (pendientes o confirmadas) ya existen para ese día
+    const queryCitas = `
+      SELECT COUNT(*)::INT AS total_citas
+      FROM citas c
+      INNER JOIN estados_cita ec ON c.estado_id = ec.id
+      WHERE c.unidad_medica_id = $1
+        AND c.especialidad_id = $2
+        AND c.fecha_solicitada = $3
+        AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada');
+    `;
+    const resCitas = await client.query(queryCitas, [unidadMedicaId, especialidadId, fecha]);
+    const totalCitas = resCitas.rows[0].total_citas;
+
+    // 2. Traer el cupo_diario configurado para esa especialidad en esa unidad médica
+    const queryCupo = `
+      SELECT cupo_diario 
+      FROM unidad_especialidad
+      WHERE unidad_medica_id = $1 
+        AND especialidad_id = $2
+        AND activo = TRUE;
+    `;
+    const resCupo = await client.query(queryCupo, [unidadMedicaId, especialidadId]);
+
+    // Si por alguna razón no está configurada la combinación, asignamos un valor por defect
+    const cupoDiario = resCupo.rows.length > 0 ? resCupo.rows[0].cupo_diario : 20;
+
+    // 3. Si las citas actuales igualan o superan el cupo diario, devolvemos TRUE (Cupo lleno)
+    return totalCitas >= cupoDiario;
+
   } catch (err) {
     throw err;
   } finally {

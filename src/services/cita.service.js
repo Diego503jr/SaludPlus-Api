@@ -73,23 +73,35 @@ exports.obtenerHorariosDisponibles = async (
   fecha,
 ) => {
   try {
-    // 1. Averiguar qué día de la semana es la fecha (Lunes = 1, Domingo = 7)
-    const partesFecha = fecha.split("-"); // ej "2026-05-15" -> ["2026", "05", "15"]
+    const cupoLleno = await citaModel.verificarCupoDiarioAlcanzado(
+      unidadId,
+      especialidadId,
+      fecha
+    );
+
+    // Si ya se alcanzó el límite de cupos del día, retornamos vacío de inmediato
+    if (cupoLleno) {
+      return []; 
+    }
+
+
+    // Averiguar qué día de la semana es la fecha (Lunes = 1, Domingo = 7)
+    const partesFecha = fecha.split("-"); 
     const fechaObj = new Date(
       partesFecha[0],
       partesFecha[1] - 1,
       partesFecha[2],
     );
     let diaSemana = fechaObj.getDay();
-    diaSemana = diaSemana === 0 ? 7 : diaSemana; // En BD guardamos Domingo como 7
+    diaSemana = diaSemana === 0 ? 7 : diaSemana; 
 
-    // 2. Traer a qué hora abre y cierra la unidad ese día
+    // Traer a qué hora abre y cierra la unidad ese día
     const horario = await citaModel.obtenerHorarioApertura(unidadId, diaSemana);
 
     // Si no hay horario, la clínica está cerrada ese día
     if (!horario) throw new Error("No hay horarios registrados.");
 
-    // 3. Cuántos médicos atienden esta unidad + especialidad (médicos activos)
+    // Cuántos médicos atienden esta unidad + especialidad (médicos activos)
     const totalMedicos = await citaModel.contarMedicosDisponibles(
       unidadId,
       especialidadId,
@@ -98,15 +110,14 @@ exports.obtenerHorariosDisponibles = async (
     // Si no hay ni un médico, no hay nada que ofrecer
     if (totalMedicos === 0) throw new Error("No hay medicos disponibles.");
 
-    // 4. Cuántos médicos están ocupados POR cada hora
-    //    ej. { "08:00:00": 2, "09:30:00": 1 }
+    // Cuántos médicos están ocupados POR cada hora
     const ocupadasPorHora = await citaModel.obtenerOcupacionPorHora(
       unidadId,
       especialidadId,
       fecha,
     );
 
-    // 5. Recorrer los bloques de 30 min y dejar solo donde quede algún médico libre
+    // Recorrer los bloques de 30 min y dejar solo donde quede algún médico libre
     const disponibles = [];
     let horaActual = horario.hora_inicio;
     const horaFin = horario.hora_fin;
@@ -114,17 +125,12 @@ exports.obtenerHorariosDisponibles = async (
     while (horaActual < horaFin) {
       const ocupados = ocupadasPorHora[horaActual] || 0;
 
-      // Hay hueco mientras NO estén ocupados todos los médicos
       if (ocupados < totalMedicos) {
-        // Le quitamos los segundos para que Android lo reciba bonito (ej. "08:30")
         disponibles.push(horaActual.substring(0, 5));
       }
 
-      // Siguiente bloque
       horaActual = sumarMinutos(horaActual, 30);
     }
-
-    if (!disponibles) throw new Error("No hay horarios disponibles.");
 
     return disponibles;
   } catch (error) {
@@ -253,7 +259,7 @@ exports.historicoCitasPorPaciente = async (id) => {
 
 //MODIFICAR CITAS
 
-exports.modificarCita = async (idCita, datos) => {
+exports.modificarCita = async (idCita, datos, usuarioId) => { 
   try {
     let camposEfectivos = { ...datos };
 
@@ -262,10 +268,13 @@ exports.modificarCita = async (idCita, datos) => {
       camposEfectivos.estado_id = 5;
     }
 
+    //Pasamos el usuarioId como tercer parámetro para que el modelo registre la cancelación
     const resultado = await citaModel.actualizarEstadoCita(
       idCita,
       camposEfectivos,
+      usuarioId
     );
+    
     if (!resultado) {
       throw new Error("Cita no encontrada");
     }
