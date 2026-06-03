@@ -535,7 +535,7 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
       // Si es cancelación (ID 3)
       if (Number(datos.estado_id) === 3) {
         const queryHistorial = `
-          INSERT INTO historial_cancelacion (cita_id, paciente_id, motivo)
+          INSERT INTO historial_cancelaciones (cita_id, paciente_id, motivo)
           VALUES ($1, $2, $3);
         `;
         const motivoCancelacion = datos.motivo || "Cancelada por el paciente";
