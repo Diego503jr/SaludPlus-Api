@@ -257,23 +257,24 @@ exports.historicoCitasPorPaciente = async (id) => {
   return result;
 };
 
-//MODIFICAR CITAS
-
-exports.modificarCita = async (idCita, datos, usuarioId) => { 
+// =============================================================================
+// MODIFICAR CITA (SERVICIO ÚNICO): CANCELAR O REPROGRAMAR
+// =============================================================================
+exports.modificarCita = async (idCita, datos) => {
   try {
     let camposEfectivos = { ...datos };
 
-    // Si se manda fecha y hora para cambiar, REPROGRAMACIÓN
-    if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
-      camposEfectivos.estado_id = 5;
+    //Si se recibe el body vacío ({}), asumimos que es una CANCELACIÓN
+    if (Object.keys(datos).length === 0 || (datos.estado_id === undefined && !datos.fecha_solicitada)) {
+      camposEfectivos.estado_id = 3; // 3 = cancelada_paciente según tu tabla estados_cita
+    } 
+    //Si se manda fecha y hora para cambiar pero no un estado_id, es una REPROGRAMACIÓN
+    else if (datos.fecha_solicitada && datos.hora_asignada && !datos.estado_id) {
+      camposEfectivos.estado_id = 5; // 5 = reprogramada según tu tabla estados_cita
     }
 
-    //Pasamos el usuarioId como tercer parámetro para que el modelo registre la cancelación
-    const resultado = await citaModel.actualizarEstadoCita(
-      idCita,
-      camposEfectivos,
-      usuarioId
-    );
+    // Llamamos al modelo pasándole únicamente la cita y el objeto de datos procesado
+    const resultado = await citaModel.actualizarEstadoCita(idCita, camposEfectivos);
     
     if (!resultado) {
       throw new Error("Cita no encontrada");
