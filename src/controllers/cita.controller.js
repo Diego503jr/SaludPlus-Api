@@ -252,12 +252,10 @@ exports.actualizarCitaUnico = async (req, res) => {
       mensaje: "¡La cita se ha actualizado correctamente!",
     });
   } catch (error) {
-    console.error("Error en actualizarCitaUnico:", error);
-    if (error.message === "Cita no encontrada") {
-      return res.status(404).json({ exito: false, mensaje: error.message });
-    }
-    res
-      .status(500)
-      .json({ exito: false, mensaje: "Error interno del servidor" });
+    res.status(err.status || 500).json({
+      success: false,
+      data: {},
+      message: err.message,
+    });
   }
 };
