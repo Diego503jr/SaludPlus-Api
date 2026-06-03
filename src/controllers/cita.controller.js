@@ -252,10 +252,10 @@ exports.actualizarCitaUnico = async (req, res) => {
       mensaje: "¡La cita se ha actualizado correctamente!",
     });
   } catch (error) {
-    res.status(err.status || 500).json({
+    res.status(error.status || 500).json({
       success: false,
       data: {},
-      message: err.message,
+      message: error.message,
     });
   }
 };
