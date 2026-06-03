@@ -461,13 +461,13 @@ exports.historicoCitasPorPaciente = async (idPaciente) => {
 };
 
 // ==========================================
-// ACTUALIZAR O REPROGRAMAR CITA 
+// ACTUALIZAR O REPROGRAMAR CITA
 // ==========================================
-exports.actualizarEstadoCita = async (idCita, datos) => { 
+exports.actualizarEstadoCita = async (idCita, datos) => {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    
+    await client.query("BEGIN");
+
     // 1. Obtener los datos actuales de la cita antes de cambiar nada
     const queryBuscar = `
       SELECT id, paciente_id, medico_id, unidad_medica_id, especialidad_id, motivo_consulta
@@ -477,7 +477,7 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
     const resBuscar = await client.query(queryBuscar, [idCita]);
 
     if (resBuscar.rows.length === 0) {
-      throw new Error('ERROR: Cita no encontrada');
+      throw new Error("ERROR: Cita no encontrada");
     }
 
     const citaOriginal = resBuscar.rows[0];
@@ -486,14 +486,14 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
     let resultadoFinal = null;
 
     // =========================================================================
-    // CASO 1: FLUJO DE REPROGRAMACIÓN 
+    // CASO 1: FLUJO DE REPROGRAMACIÓN
     // =========================================================================
     if (Number(datos.estado_id) === 5) {
-      // Actualizamos la cita vieja a estado 'reprogramada' 
+      // Actualizamos la cita vieja a estado 'reprogramada'
       const queryVieja = `UPDATE citas SET estado_id = 5 WHERE id = $1;`;
       await client.query(queryVieja, [idCita]);
 
-      // Insertamos la NUEVA cita replicando la información base 
+      // Insertamos la NUEVA cita replicando la información base
       const queryNuevaCita = `
         INSERT INTO citas (
           paciente_id, unidad_medica_id, especialidad_id, 
@@ -507,18 +507,18 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
         citaOriginal.paciente_id,
         citaOriginal.unidad_medica_id,
         citaOriginal.especialidad_id,
-        datos.fecha_solicitada, 
-        datos.hora_asignada,     
+        datos.fecha_solicitada,
+        datos.hora_asignada,
         citaOriginal.motivo_consulta,
-        idCita                  
+        idCita,
       ];
 
       const resNueva = await client.query(queryNuevaCita, valuesNuevaCita);
       resultadoFinal = resNueva.rows[0];
 
-    // =========================================================================
-    // CASO 2: FLUJO DE CANCELACIÓN 
-    // =========================================================================
+      // =========================================================================
+      // CASO 2: FLUJO DE CANCELACIÓN
+      // =========================================================================
     } else {
       const queryUpdate = `
         UPDATE citas 
@@ -526,25 +526,31 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
         WHERE id = $2
         RETURNING id, estado_id;
       `;
-      const resUpdate = await client.query(queryUpdate, [datos.estado_id, idCita]);
+      const resUpdate = await client.query(queryUpdate, [
+        datos.estado_id,
+        idCita,
+      ]);
       resultadoFinal = resUpdate.rows[0];
 
       // Si es cancelación (ID 3)
       if (Number(datos.estado_id) === 3) {
         const queryHistorial = `
-          INSERT INTO historial_cancelacion_citas (cita_id, paciente_id, motivo)
+          INSERT INTO historial_cancelacion (cita_id, paciente_id, motivo)
           VALUES ($1, $2, $3);
         `;
-        const motivoCancelacion = datos.motivo || 'Cancelada por el paciente';
-        await client.query(queryHistorial, [idCita, citaOriginal.paciente_id, motivoCancelacion]);
+        const motivoCancelacion = datos.motivo || "Cancelada por el paciente";
+        await client.query(queryHistorial, [
+          idCita,
+          citaOriginal.paciente_id,
+          motivoCancelacion,
+        ]);
       }
     }
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     return resultadoFinal;
-
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     console.error("Transacción abortada en actualizarEstadoCita", err);
     throw err;
   } finally {
@@ -555,7 +561,11 @@ exports.actualizarEstadoCita = async (idCita, datos) => {
 // =============================================================================
 // VERIFICAR SI SE ALCANZÓ EL CUPO DIARIO DE UNA ESPECIALIDAD EN LA UNIDAD
 // =============================================================================
-exports.verificarCupoDiarioAlcanzado = async (unidadMedicaId, especialidadId, fecha) => {
+exports.verificarCupoDiarioAlcanzado = async (
+  unidadMedicaId,
+  especialidadId,
+  fecha,
+) => {
   const client = await pool.connect();
   try {
     //Contar cuántas citas activas (pendientes o confirmadas) ya existen para ese día
@@ -568,7 +578,11 @@ exports.verificarCupoDiarioAlcanzado = async (unidadMedicaId, especialidadId, fe
         AND c.fecha_solicitada = $3
         AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada');
     `;
-    const resCitas = await client.query(queryCitas, [unidadMedicaId, especialidadId, fecha]);
+    const resCitas = await client.query(queryCitas, [
+      unidadMedicaId,
+      especialidadId,
+      fecha,
+    ]);
     const totalCitas = resCitas.rows[0].total_citas;
 
     // 2. Traer el cupo_diario configurado para esa especialidad en esa unidad médica
@@ -579,14 +593,17 @@ exports.verificarCupoDiarioAlcanzado = async (unidadMedicaId, especialidadId, fe
         AND especialidad_id = $2
         AND activo = TRUE;
     `;
-    const resCupo = await client.query(queryCupo, [unidadMedicaId, especialidadId]);
+    const resCupo = await client.query(queryCupo, [
+      unidadMedicaId,
+      especialidadId,
+    ]);
 
     // Si por alguna razón no está configurada la combinación, asignamos un valor por defect
-    const cupoDiario = resCupo.rows.length > 0 ? resCupo.rows[0].cupo_diario : 20;
+    const cupoDiario =
+      resCupo.rows.length > 0 ? resCupo.rows[0].cupo_diario : 20;
 
     // 3. Si las citas actuales igualan o superan el cupo diario, devolvemos TRUE (Cupo lleno)
     return totalCitas >= cupoDiario;
-
   } catch (err) {
     throw err;
   } finally {
