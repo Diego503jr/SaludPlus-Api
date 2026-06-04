@@ -266,7 +266,7 @@ exports.crearCita = async (datos) => {
           WHERE c.medico_id = m.id
             AND c.fecha_solicitada = $3
             AND c.hora_asignada = $4
-            AND ec.nombre IN ('pendiente', 'confirmada', 'reprogramada')
+            AND ec.nombre IN ('pendiente', 'confirmada')
         )
       ORDER BY m.id
       FOR UPDATE OF m SKIP LOCKED
@@ -280,10 +280,10 @@ exports.crearCita = async (datos) => {
       ],
     );
 
-    // 3. Si no hay ninguno libre => error (tu caso de "no hay horas disponibles")
+    // 3. Si no hay ninguno libre => error
     if (resMedico.rows.length === 0) {
       const error = new Error("No hay médicos disponibles para esa hora.");
-      error.statusCode = 409; // Conflict
+      error.statusCode = 409; 
       throw error;
     }
     const medicoIdLibre = resMedico.rows[0].id;
