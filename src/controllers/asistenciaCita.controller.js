@@ -21,11 +21,12 @@ exports.marcarAsistencia = async (req, res) => {
 
     } catch (error) {
         //Error
+        console.error("ERROR ASISTENCIA:", error.message);
         const statusCode = error.message.includes("No se pudo registrar") ? 404 : 400;
         
         return res.status(statusCode).json({
             success: false,
-            message: error.message || "Error al procesar la asistencia."
+            message: error.message
         });
     }
 };
