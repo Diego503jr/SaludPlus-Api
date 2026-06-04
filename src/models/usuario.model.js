@@ -16,7 +16,8 @@ exports.findByPacient = async (user) => {
          FROM pacientes P 
           INNER JOIN usuarios U ON U.id = P.usuario_id
 		      INNER JOIN roles R ON R.id = U.rol_id
-         WHERE P.num_afiliado = $1`,
+         WHERE P.num_afiliado = $1
+          AND U.activo`,
       [user.numAfiliado],
     );
 
@@ -58,7 +59,8 @@ exports.findByMedic = async (user) => {
           INNER JOIN roles R ON R.id = U.rol_id
           INNER JOIN especialidades E ON E.id = M.especialidad_id
           INNER JOIN unidades_medicas UM ON UM.id = M.unidad_medica_id
-         WHERE M.num_jvpm = $1`,
+         WHERE M.num_jvpm = $1
+          AND U.activo`,
       [user.numJvpm],
     );
 
