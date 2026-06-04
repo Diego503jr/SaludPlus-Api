@@ -140,52 +140,52 @@ exports.obtenerHorariosDisponibles = async (
 
 // HISTORIAL DE CITAS: SERVICIO PARA SEPARAR PRÓXIMAS Y PASADAS
 exports.obtenerHistorialCitas = async (idUsuario) => {
-  try {
-    const citas = await citaModel.obtenerHistorialPaciente(idUsuario);
+    try {
+        const citas = await citaModel.obtenerHistorialPaciente(idUsuario); 
+        
+        const proximas = [];
+        const pasadas = [];
+        
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
 
-    const proximas = [];
-    const pasadas = [];
+        const estadosActivos = ['pendiente', 'confirmada']; 
 
-    // Obtenemos la fecha de hoy a la medianoche para comparar correctamente
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+        citas.forEach(cita => {
+            let nombreDoctor = "Por asignar";
+            if (cita.doctor_nombre && cita.doctor_apellido) {
+                nombreDoctor = `Dr. ${cita.doctor_nombre} ${cita.doctor_apellido}`;
+            }
 
-    // Estados que consideramos como "activos" o próximos
-    const estadosActivos = ["pendiente", "confirmada", "reprogramada"];
+            const citaFormateada = {
+                id: cita.cita_id,
+                estado: cita.estado,
+                especialidad_id: cita.especialidad_id,   
+                especialidad: cita.especialidad,
+                unidad_medica_id: cita.unidad_medica_id, 
+                unidad_medica: cita.unidad_medica,
+                fecha_solicitada: cita.fecha_solicitada,
+                hora_asignada: cita.hora_asignada || "Por asignar",
+                doctor: nombreDoctor
+            };
 
-    citas.forEach((cita) => {
-      //Unimos el nombre del doctor
-      let nombreDoctor = "Por asignar";
-      if (cita.doctor_nombre && cita.doctor_apellido) {
-        nombreDoctor = `Dr. ${cita.doctor_nombre} ${cita.doctor_apellido}`;
-      }
+            const fechaCita = new Date(cita.fecha_solicitada);
+            fechaCita.setHours(0, 0, 0, 0);
 
-      const citaFormateada = {
-        id: cita.cita_id,
-        estado: cita.estado,
-        especialidad_id: cita.especialidad_id,
-        especialidad: cita.especialidad,
-        unidad_medica_id: cita.unidad_medica_id,
-        fecha_solicitada: cita.fecha_solicitada,
-        hora_asignada: cita.hora_asignada || "Por asignar",
-        unidad_medica: cita.unidad_medica,
-        doctor: nombreDoctor,
-      };
+            // Si está pendiente/confirmada y es de hoy en adelante, va a Próximas
+            if (estadosActivos.includes(cita.estado) && fechaCita >= hoy) {
+                proximas.push(citaFormateada);
+            } else {
+                // Si está reprogramada, cancelada o atendida, se va directo a Pasadas/Historial
+                pasadas.push(citaFormateada);
+            }
+        });
 
-      const fechaCita = new Date(cita.fecha_solicitada);
-      fechaCita.setHours(0, 0, 0, 0);
+        return { proximas, pasadas };
 
-      if (estadosActivos.includes(cita.estado) && fechaCita >= hoy) {
-        proximas.push(citaFormateada);
-      } else {
-        pasadas.push(citaFormateada);
-      }
-    });
-
-    return { proximas, pasadas };
-  } catch (error) {
-    throw error;
-  }
+    } catch (error) {
+        throw error;
+    }
 };
 
 // MAPA DE UNIDADES: SERVICIO
@@ -193,7 +193,6 @@ exports.obtenerUnidadesMapa = async () => {
   try {
     const unidades = await citaModel.obtenerUnidadesParaMapa();
 
-    // Limpiamos los datos asegurándonos de que si especialidades viene vacío, sea un arreglo [] y no un null
     const unidadesFormateadas = unidades.map((unidad) => ({
       ...unidad,
       especialidades: unidad.especialidades || [],
