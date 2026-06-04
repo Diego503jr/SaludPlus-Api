@@ -9,9 +9,15 @@ exports.updateAsistido = async (id, asistidoCita, medicoId) => {
     // Inicio de transacción
     await client.query("BEGIN");
 
-    await client.query(`UPDATE citas SET estado_id = 6 WHERE id = $1::UUID`, [
-      id,
-    ]);
+   const resUpdateCita = await client.query(
+      `UPDATE citas SET estado_id = 6 WHERE id = $1::UUID RETURNING id;`, 
+      [id]
+    );
+
+    // Si rowCount es 0 significa que ese UUID de cita no existe en la base de datos
+    if (resUpdateCita.rowCount === 0) {
+      throw new Error(`No se encontró ninguna cita con el ID ${id}.`);
+    }
 
     const query = `
       INSERT INTO asistencias_cita (cita_id, medico_id, asistio, marcado_at)

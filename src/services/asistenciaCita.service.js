@@ -13,6 +13,11 @@ exports.updateAsistido = async (id, asistidoCita, medicoId) => {
         throw new Error("El ID del médico es obligatorio para registrar la asistencia.");
     }
 
+    //Si no se envian los campos, colocamos en True por defecto3
+    if(asistidoCita.asistio === undefined) {
+        asistidoCita.asistio = true;
+    }
+
     // Validamos tipo de dato del cuerpo
     if (typeof asistidoCita.asistio !== 'boolean') {
         throw new Error("El campo 'asistio' debe ser un valor booleano (true o false).");
