@@ -1,4 +1,5 @@
 const authService = require("../services/auth.service");
+const securityLib = require("../utils/security.lib");
 
 exports.registerPaciente = async (req, res) => {
   try {
@@ -64,6 +65,7 @@ exports.logout = async (req, res) => {
 exports.refresh = async (req, res) => {
   try {
     const refreshToken = req.body.refreshToken; // o desde header
+
     if (!refreshToken) {
       return res.status(401).json({
         success: false,
@@ -72,19 +74,25 @@ exports.refresh = async (req, res) => {
     }
     // 1. Validar el refresh token (firma + expiración)
     const result = securityLib.validateToken(refreshToken);
+
     if (!result.valid) {
-      // Refresh expirado o inválido → logout real
-      await usuarioModel.deleteLogIn({ token: refreshToken });
+      try {
+        // Refresh expirado o inválido → logout real
+        await usuarioModel.deleteLogIn({ token: refreshToken });
+      } catch (err) {}
+
       return res.status(401).json({
         success: false,
         expired: true,
         message: "Sesión expirada. Inicia sesión nuevamente.",
       });
     }
+
     // 2. Verificar que el refresh exista en la DB (no haya sido revocado)
     const existe = await usuarioModel.buscarRefreshToken({
       token: refreshToken,
     });
+
     if (!existe) {
       return res.status(401).json({
         success: false,
@@ -93,10 +101,11 @@ exports.refresh = async (req, res) => {
       });
     }
     // 3. Generar un NUEVO access token
-    const nuevoAccessToken = securityLib.createToken(
-      { usuarioid: result.decoded.id, rolid: result.decoded.rol },
-      "1h",
-    );
+    const nuevoAccessToken = securityLib.createToken({
+      usuarioid: result.decoded.id,
+      rolid: result.decoded.rol,
+    });
+
     return res.status(200).json({
       success: true,
       data: { accessToken: nuevoAccessToken },

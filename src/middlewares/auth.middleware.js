@@ -1,5 +1,4 @@
 const securityLib = require("../utils/security.lib");
-const usuarioModel = require("../models/usuario.model");
 
 module.exports = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -24,27 +23,21 @@ module.exports = async (req, res, next) => {
       return next();
     }
 
-    // Token EXPIRADO
+    // Token Expirado. Solo avisar que se debe refrescar.
     if (result.expired) {
-      try {
-        await usuarioModel.deleteLogIn({ token });
-      } catch (err) {
-        // Si ya estaba borrado o falló el delete, no rompemos la respuesta:
-        // el resultado para el cliente es el mismo (debe hacer logout)
-        console.error("No se pudo eliminar el token expirado:", err.message);
-      }
-
       return res.status(401).json({
         success: false,
         data: {},
-        expired: true, // hacer logout
-        message: "La sesión ha expirado. Inicia sesión nuevamente.",
+        expired: true, // Hacer refresh
+        message: "Token expirado.",
       });
     }
 
+    // Firma inválida / token manipulado → acá sí, logout directo
     return res.status(401).json({
       success: false,
       data: {},
+      expired: false, // Hacer logout
       message: "Token inválido.",
     });
   } catch (err) {

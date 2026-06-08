@@ -44,7 +44,7 @@ class SecurityLib {
     return jwt.sign(
       { id: payload.usuarioid, rol: payload.rolid },
       this.secret,
-      { expiresIn: expires },
+      { expiresIn: "3min" },
     );
   }
 
