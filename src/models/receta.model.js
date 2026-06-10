@@ -69,7 +69,7 @@ exports.getCitaById = async (citaId) => {
     let query = `SELECT U.nombre AS medico_nombre, U.apellido, U.telefono,
                   E.nombre AS especialidad, R.fecha,
                   MED.nombre_generico, MED.forma_farmaceutica, MED.concentracion,
-                  RM.dosis, RM.duracion_dias, RM.cantidad, RM.intrucciones
+                  RM.dosis, RM.duracion_dias, RM.cantidad, RM.instrucciones
                  FROM recetas R
                   INNER JOIN receta_medicamento RM ON RM.receta_id = R.id
                   INNER JOIN medicamentos MED ON MED.id = RM.medicamento_id
