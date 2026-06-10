@@ -66,8 +66,10 @@ exports.getCitaById = async (citaId) => {
     //Inicio de transacción
     await client.query("BEGIN");
 
-    let query = `SELECT U.nombre, U.apellido, U.telefono, E.nombre, R.fecha, R.especialidades, MED.nombre_generico
-                  , MED.forma_farmaceutica, MED.concentracion, RM.dosis, RM.duracion_dias, RM.cantidad, RM.intrucciones
+    let query = `SELECT U.nombre AS medico_nombre, U.apellido, U.telefono,
+                  E.nombre AS especialidad, R.fecha, R.especialidades,
+                  MED.nombre_generico, MED.forma_farmaceutica, MED.concentracion,
+                  RM.dosis, RM.duracion_dias, RM.cantidad, RM.intrucciones
                  FROM recetas R
                   INNER JOIN receta_medicamento RM ON RM.receta_medicamento = R.id
                   INNER JOIN medicamentos MED ON MED.id = RM.medicamento_id
