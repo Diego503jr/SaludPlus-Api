@@ -71,7 +71,7 @@ exports.getCitaById = async (citaId) => {
                   MED.nombre_generico, MED.forma_farmaceutica, MED.concentracion,
                   RM.dosis, RM.duracion_dias, RM.cantidad, RM.intrucciones
                  FROM recetas R
-                  INNER JOIN receta_medicamento RM ON RM.receta_medicamento = R.id
+                  INNER JOIN receta_medicamento RM ON RM.receta_id = R.id
                   INNER JOIN medicamentos MED ON MED.id = RM.medicamento_id
                   LEFT JOIN medicos M ON M.id = R.medico_id
                   INNER JOIN especialidades E ON E.id = M.especialidad_id
