@@ -49,6 +49,6 @@ router.patch(
 );
 
 // RUTA RECETA
-router.get("/historial/cita/:citaId", authMiddleware, receta.getCitaById);
+router.get("/historial/receta/:citaId", authMiddleware, receta.getCitaById);
 
 module.exports = router;
