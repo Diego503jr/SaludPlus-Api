@@ -67,7 +67,7 @@ exports.getCitaById = async (citaId) => {
     await client.query("BEGIN");
 
     let query = `SELECT U.nombre AS medico_nombre, U.apellido, U.telefono,
-                  E.nombre AS especialidad, R.fecha, R.especialidades,
+                  E.nombre AS especialidad, R.fecha,
                   MED.nombre_generico, MED.forma_farmaceutica, MED.concentracion,
                   RM.dosis, RM.duracion_dias, RM.cantidad, RM.intrucciones
                  FROM recetas R
