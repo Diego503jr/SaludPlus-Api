@@ -5,6 +5,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 // Importamos el controlador de citas
 const citaController = require("../controllers/cita.controller");
 const pacienteController = require("../controllers/paciente.controller");
+const receta = require("../controllers/receta.controller");
 
 // RUTAS DEL PACIENTE
 
@@ -42,9 +43,12 @@ router.put(
 
 // RUTA: Cancelar o Reprogramar una cita
 router.patch(
-  '/actualizar-cita/:citaId', 
-  authMiddleware, 
-  citaController.actualizarCitaUnico
+  "/actualizar-cita/:citaId",
+  authMiddleware,
+  citaController.actualizarCitaUnico,
 );
+
+// RUTA RECETA
+router.get("/historial/cita/:citaId", authMiddleware, receta.getCitaById);
 
 module.exports = router;
