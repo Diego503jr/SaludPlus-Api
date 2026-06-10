@@ -42,7 +42,7 @@ exports.getCitaById = async (req, res) => {
   try {
     const idCita = req.params.citaId;
 
-    const data = recetaService.getCitaByPaciente(idCita);
+    const data = await recetaService.getCitaByPaciente(idCita);
 
     // Enviamos la data al front-end
     res.status(200).json({
