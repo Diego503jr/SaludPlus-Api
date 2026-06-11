@@ -64,54 +64,18 @@ exports.logout = async (req, res) => {
 // usuario.controller.js
 exports.refresh = async (req, res) => {
   try {
-    const refreshToken = req.body.refreshToken; // o desde header
-
-    if (!refreshToken) {
-      return res.status(401).json({
-        success: false,
-        message: "No hay refresh token",
-      });
-    }
-    // 1. Validar el refresh token (firma + expiración)
-    const result = securityLib.validateToken(refreshToken);
-
-    if (!result.valid) {
-      try {
-        // Refresh expirado o inválido → logout real
-        await usuarioModel.deleteLogIn({ token: refreshToken });
-      } catch (err) {}
-
-      return res.status(401).json({
-        success: false,
-        expired: true,
-        message: "Sesión expirada. Inicia sesión nuevamente.",
-      });
-    }
-
-    // 2. Verificar que el refresh exista en la DB (no haya sido revocado)
-    const existe = await usuarioModel.buscarRefreshToken({
-      token: refreshToken,
-    });
-
-    if (!existe) {
-      return res.status(401).json({
-        success: false,
-        expired: true,
-        message: "Sesión no válida.",
-      });
-    }
-    // 3. Generar un NUEVO access token
-    const nuevoAccessToken = securityLib.createToken({
-      usuarioid: result.decoded.id,
-      rolid: result.decoded.rol,
-    });
+    const session = await authService.refresh(req.body);
 
     return res.status(200).json({
       success: true,
-      data: { accessToken: nuevoAccessToken },
+      data: session,
       message: "Token renovado.",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(err.status || 500).json({
+      success: false,
+      ...(err.expired && { expired: true }),
+      message: err.message,
+    });
   }
 };

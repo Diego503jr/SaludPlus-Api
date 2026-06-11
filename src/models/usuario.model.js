@@ -341,3 +341,43 @@ exports.buscarRefreshToken = async (data) => {
     client.release();
   }
 };
+
+// Rota el refresh token: reemplaza el token viejo por el nuevo y devuelve la fila
+exports.actualizarRefreshToken = async (data) => {
+  const client = await pool.connect();
+  let session = null;
+
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `UPDATE refresh_tokens
+          SET token_hash = $1,
+              expires_at = NOW() + INTERVAL '7 days'
+        WHERE token_hash = $2
+          AND revocado = FALSE
+          AND expires_at > NOW()
+        RETURNING token_hash`,
+      [data.newToken, data.oldToken],
+    );
+
+    // Si no actualizó nada, la sesión no existe, está revocada o expiró
+    if (result.rowCount === 0) {
+      const error = new Error(
+        "No se encontró una sesión válida para actualizar.",
+      );
+      error.status = 401;
+      throw error;
+    }
+
+    await client.query("COMMIT");
+    session = result.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  return session;
+};

@@ -76,3 +76,54 @@ exports.logout = async (data) => {
 
   return result;
 };
+
+// Funcion de service para renovar el access token
+exports.refresh = async (data) => {
+  const refreshToken = data.refreshToken; // o desde header
+
+  if (!refreshToken) {
+    const error = Error("No hay token para realizar el refresh.");
+    error.status = 401;
+    throw error;
+  }
+
+  // 1. Validar el refresh token (firma + expiración)
+  const result = securityLib.validateToken(refreshToken);
+
+  if (!result.valid) {
+    // Refresh expirado o inválido → logout real
+    try {
+      await usuarioModel.deleteLogIn({ token: refreshToken });
+    } catch (err) {}
+
+    const error = Error("Sesión expirada. Inicia sesión nuevamente.");
+    error.status = 401;
+    error.expired = true;
+    throw error;
+  }
+
+  // 2. Verificar que el refresh exista en la DB (no haya sido revocado)
+  const existe = await usuarioModel.buscarRefreshToken({
+    token: refreshToken,
+  });
+
+  if (!existe) {
+    const error = Error("Sesión no válida.");
+    error.status = 401;
+    error.expired = true;
+    throw error;
+  }
+
+  // 3. Generar un NUEVO access token
+  const new_jwt = securityLib.createToken({
+    usuarioid: result.decoded.id,
+    rolid: result.decoded.rol,
+  });
+
+  const response = usuarioModel.refreshToken({
+    newToken: new_jwt,
+    oldToken: refreshToken,
+  });
+
+  return response;
+};
